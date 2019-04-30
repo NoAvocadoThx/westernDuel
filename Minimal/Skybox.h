@@ -12,5 +12,6 @@ public:
   ~Skybox();
 
   void draw(unsigned int skyboxShader, const glm::mat4& p, const glm::mat4& v);
+  void drawMode(int i);
 };
 #endif

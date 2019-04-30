@@ -98,14 +98,26 @@ std::vector<std::string> faces
   "front.ppm"
 };
 
+std::vector<std::string> faces_r
+{
+  "left_r.ppm",
+  "right_r.ppm",
+  "up_r.ppm",
+  "down_r.ppm",
+  "back_r.ppm",
+  "front_r.ppm"
+};
+
 TexturedCube::TexturedCube(const std::string dir) : Cube()
 {
-  cubeMap = loadCubemap("./" + dir + "/", faces);
+  cubeMap_l = loadCubemap("./" + dir + "/", faces);
+  cubeMap_r = loadCubemap("./" + dir + "/", faces_r);
 }
 
 TexturedCube::~TexturedCube()
 {
-  glDeleteTextures(1, &cubeMap);
+  glDeleteTextures(1, &cubeMap_l);
+  glDeleteTextures(1, &cubeMap_r);
 }
 
 void TexturedCube::draw(unsigned shader, const glm::mat4& p, const glm::mat4& v)
@@ -123,8 +135,17 @@ void TexturedCube::draw(unsigned shader, const glm::mat4& p, const glm::mat4& v)
 
   glBindVertexArray(VAO);
   glActiveTexture(GL_TEXTURE0);
-  glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMap);
+  glBindTexture(GL_TEXTURE_CUBE_MAP,texID);
   glUniform1i(glGetUniformLocation(shader, "skybox"), 0);
   glDrawArrays(GL_TRIANGLES, 0, 36);
   glBindVertexArray(0);
+}
+
+void TexturedCube::drawMode(int mode) {
+	if (mode == 0) {
+		texID = cubeMap_l;
+	}
+	else if (mode == 1) {
+		texID = cubeMap_r;
+	}
 }

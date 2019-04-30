@@ -493,6 +493,7 @@ private:
   ovrEyeRenderDesc _eyeRenderDescs[2];
 
   mat4 _eyeProjections[2];
+  ovrPosef lastEye[2], renderEye[2];
 
   ovrLayerEyeFov _sceneLayer;
   ovrViewScaleDesc _viewScaleDesc;
@@ -626,13 +627,37 @@ protected:
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, _fbo);
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, curTexId, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    ovr::for_each_eye([&](ovrEyeType eye)
-    {
-      const auto& vp = _sceneLayer.Viewport[eye];
-      glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
-      _sceneLayer.RenderPose[eye] = eyePoses[eye];
-      renderScene(_eyeProjections[eye], ovr::toGlm(eyePoses[eye]));
-    });
+	ovr::for_each_eye([&](ovrEyeType eye) {
+		renderEye[eye] = lastEye[eye];
+		if (getTrackingState() == 0) {
+			renderEye[eye] = eyePoses[eye];
+		}
+		else if (getTrackingState() == 2) {
+			renderEye[eye].Position = eyePoses[eye].Position;
+		}
+		else if (getTrackingState() == 3) {
+			renderEye[eye].Orientation = eyePoses[eye].Orientation;
+		}
+		lastEye[eye] = renderEye[eye];
+
+		
+		if (getViewState() == 1) {
+			currentEye(ovrEye_Left);
+			const auto& vp = _sceneLayer.Viewport[eye];
+			glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
+			_sceneLayer.RenderPose[eye] = eyePoses[ovrEye_Left];
+			renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]));
+		}
+		else {
+			currentEye(eye);
+			const auto& vp = _sceneLayer.Viewport[eye];
+			glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
+			_sceneLayer.RenderPose[eye] = eyePoses[eye];
+			if (eye == ovrEye_Left && getViewState() == 3) return;
+			if (eye == ovrEye_Right && getViewState() == 2) return;
+			renderScene(_eyeProjections[eye], ovr::toGlm(renderEye[eye]));
+		}
+	});
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
     ovr_CommitTextureSwapChain(_session, _eyeTexture);
@@ -649,6 +674,9 @@ protected:
   }
 
   virtual void renderScene(const glm::mat4& projection, const glm::mat4& headPose) = 0;
+  virtual void currentEye(ovrEyeType eye) = 0;
+  virtual int getViewState() = 0;
+  virtual int getTrackingState() = 0;
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -676,6 +704,10 @@ class Scene
   const unsigned int GRID_SIZE{5};
 
 public:
+	int buttonA = 0, buttonB = 0, buttonX = 0;
+	bool buttonAPressed = false, buttonBPressed = false, buttonXPressed = false;
+	float IOD = 0.0f, cubeSize = 0.03f;
+	int eye;
   Scene()
   {
     // Create two cube
@@ -707,12 +739,23 @@ public:
     // Render Skybox : remove view translation
     skybox->draw(shaderID, projection, view);
   }
+
+  void currentEye(int eyeIdx) {
+	  eye = eyeIdx;
+	  if (buttonX == 3) {
+		  skybox->drawMode(3);
+	  }
+	  else {
+		  skybox->drawMode(eye);
+	  }
+  }
 };
 
 // An example application that renders a simple cube
 class ExampleApp : public RiftApp
 {
   std::shared_ptr<Scene> scene;
+
 
 public:
   ExampleApp()
@@ -733,10 +776,47 @@ protected:
   {
     scene.reset();
   }
+  void update() final override {
+	  ovrInputState inputState;
+	  if (OVR_SUCCESS(ovr_GetInputState(_session, ovrControllerType_Touch, &inputState))) {
+		  if (inputState.Buttons & ovrButton_A) scene->buttonAPressed = true;
+		  else if (scene->buttonAPressed) {
+			  scene->buttonA = (scene->buttonA + 1) % 4; scene->buttonAPressed = false;
+		  }
+		  if (inputState.Buttons & ovrButton_B) scene->buttonBPressed = true;
+		  else if (scene->buttonBPressed) {
+			  scene->buttonB = (scene->buttonB + 1) % 4; scene->buttonBPressed = false;
+		  }
+		  if (inputState.Buttons & ovrButton_X) scene->buttonXPressed = true;
+		  else if (scene->buttonXPressed) {
+			  scene->buttonX = (scene->buttonX + 1) % 4; scene->buttonXPressed = false;
+		  }
 
+		  if (inputState.Buttons & ovrButton_RThumb) scene->IOD = 0;
+		  else {
+			  if (inputState.Thumbstick[ovrHand_Right].x > 0.5f) scene->IOD += 0.001f;
+			  else if (inputState.Thumbstick[ovrHand_Right].x < -0.5f) scene->IOD -= 0.001f;
+		  }
+		  if (inputState.Buttons & ovrButton_LThumb) scene->cubeSize = 0.03f;
+		  else {
+			  if (inputState.Thumbstick[ovrHand_Left].x > 0.5f) scene->cubeSize = std::min(scene->cubeSize + 0.001f, 0.1f);
+			  else if (inputState.Thumbstick[ovrHand_Left].x < -0.5f) scene->cubeSize = std::max(scene->cubeSize - 0.001f, 0.001f);
+		  }
+	  }
+  }
   void renderScene(const glm::mat4& projection, const glm::mat4& headPose) override
   {
     scene->render(projection, glm::inverse(headPose));
+  }
+  int getViewState() { return scene->buttonA; }
+  int getTrackingState() { return scene->buttonB; }
+  void currentEye(ovrEyeType eye){
+	  if (eye == ovrEye_Left) {
+		  scene->currentEye(0);
+	  }
+	  else {
+		  scene->currentEye(1);
+	  }
   }
 };
 
