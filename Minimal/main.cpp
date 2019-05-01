@@ -640,7 +640,20 @@ protected:
 		}
 		lastEye[eye] = renderEye[eye];
 
-		
+		/*if (getSceneState() == 0) {
+			const auto& vp = _sceneLayer.Viewport[eye];
+			glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
+			_sceneLayer.RenderPose[eye] = eyePoses[eye];
+			renderScene(_eyeProjections[eye], ovr::toGlm(eyePoses[eye]));
+		}
+		else if (getSceneState() == 1) {
+			
+			const auto& vp = _sceneLayer.Viewport[eye];
+			glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
+			_sceneLayer.RenderPose[eye] = eyePoses[ovrEye_Left];
+			renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]));
+		}*/
+
 		if (getViewState() == 1) {
 			currentEye(ovrEye_Left);
 			const auto& vp = _sceneLayer.Viewport[eye];
@@ -677,6 +690,7 @@ protected:
   virtual void currentEye(ovrEyeType eye) = 0;
   virtual int getViewState() = 0;
   virtual int getTrackingState() = 0;
+  virtual int getSceneState() = 0;
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -708,6 +722,7 @@ public:
 	bool buttonAPressed = false, buttonBPressed = false, buttonXPressed = false;
 	float IOD = 0.0f, cubeSize = 0.03f;
 	int eye;
+	float scalor=0.1f;
   Scene()
   {
     // Create two cube
@@ -728,25 +743,29 @@ public:
 
   void render(const glm::mat4& projection, const glm::mat4& view)
   {
-    // Render two cubes
-    for (int i = 0; i < instanceCount; i++)
-    {
-      // Scale to 20cm: 200cm * 0.1
-      cube->toWorld = instance_positions[i] * glm::scale(glm::mat4(1.0f), glm::vec3(0.1f));
-      cube->draw(shaderID, projection, view);
-    }
-
+	  if (buttonX == 0||buttonA!=2) {
+		  // Render two cubes
+		  for (int i = 0; i < instanceCount; i++)
+		  {
+			  // Scale to 20cm: 200cm * 0.1
+			  cube->toWorld = instance_positions[i] * glm::scale(glm::mat4(1.0f), glm::vec3(cubeSize));
+			  cube->draw(shaderID, projection, view);
+		  }
+	  }
     // Render Skybox : remove view translation
     skybox->draw(shaderID, projection, view);
   }
 
   void currentEye(int eyeIdx) {
 	  eye = eyeIdx;
-	  if (buttonX == 3) {
-		  skybox->drawMode(3);
+	  if (buttonX == 0) {
+		  skybox->drawMode(0);
+	  }
+	  else if(buttonX==1){
+		  skybox->drawMode(1);
 	  }
 	  else {
-		  skybox->drawMode(eye);
+		  skybox->drawMode(2);
 	  }
   }
 };
@@ -789,7 +808,7 @@ protected:
 		  }
 		  if (inputState.Buttons & ovrButton_X) scene->buttonXPressed = true;
 		  else if (scene->buttonXPressed) {
-			  scene->buttonX = (scene->buttonX + 1) % 4; scene->buttonXPressed = false;
+			  scene->buttonX = (scene->buttonX + 1) % 3; scene->buttonXPressed = false;
 		  }
 
 		  if (inputState.Buttons & ovrButton_RThumb) scene->IOD = 0;
@@ -818,6 +837,8 @@ protected:
 		  scene->currentEye(1);
 	  }
   }
+
+  int getSceneState() { return scene->buttonX; }
 };
 
 // Execute our example class

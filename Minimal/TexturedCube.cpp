@@ -110,8 +110,14 @@ std::vector<std::string> faces_r
 
 TexturedCube::TexturedCube(const std::string dir) : Cube()
 {
-  cubeMap_l = loadCubemap("./" + dir + "/", faces);
-  cubeMap_r = loadCubemap("./" + dir + "/", faces_r);
+	if (dir == "skybox") {
+      cubeMap_l = loadCubemap("./" + dir + "/", faces);
+	  cubeMap_r = loadCubemap("./" + dir + "/", faces_r);
+  }
+	else if (dir == "cube") {
+		cubeMap_l= loadCubemap("./" + dir + "/", faces);
+		texID = cubeMap_l;
+	}
 }
 
 TexturedCube::~TexturedCube()
@@ -147,5 +153,8 @@ void TexturedCube::drawMode(int mode) {
 	}
 	else if (mode == 1) {
 		texID = cubeMap_r;
+	}
+	else {
+		texID = cubeMap_l;
 	}
 }

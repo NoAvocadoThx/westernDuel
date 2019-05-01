@@ -25,6 +25,7 @@ public:
   void draw(GLuint shaderProgram, const glm::mat4& projection, const glm::mat4& view);
   void update();
   void spin(float);
+  void drawMode(int);
 
   // These variables are needed for the shader program
   GLuint vertexBuffer, normalBuffer, VAO;
