@@ -54,6 +54,7 @@ artifacts/
 *.ilk
 *.meta
 *.obj
+!sphere.obj
 *.pch
 *.pdb
 *.pgc
