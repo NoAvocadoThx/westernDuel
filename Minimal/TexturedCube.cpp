@@ -110,10 +110,13 @@ std::vector<std::string> faces_r
 
 TexturedCube::TexturedCube(const std::string dir) : Cube()
 {
-	if (dir == "skybox") {
-      cubeMap_l = loadCubemap("./" + dir + "/", faces);
-	  cubeMap_r = loadCubemap("./" + dir + "/", faces_r);
-  }
+	if (dir == "skybox_r") {
+
+		cubeMap_r = loadCubemap("./" + dir + "/", faces_r);
+	}
+	else if(dir=="skybox_l"){
+	    cubeMap_l = loadCubemap("./" + dir + "/", faces);
+    }
 	else if (dir == "cube") {
 		cubeMap_l= loadCubemap("./" + dir + "/", faces);
 		texID = cubeMap_l;
@@ -124,6 +127,7 @@ TexturedCube::~TexturedCube()
 {
   glDeleteTextures(1, &cubeMap_l);
   glDeleteTextures(1, &cubeMap_r);
+  glDeleteTextures(1, &texID);
 }
 
 void TexturedCube::draw(unsigned shader, const glm::mat4& p, const glm::mat4& v)
@@ -147,14 +151,4 @@ void TexturedCube::draw(unsigned shader, const glm::mat4& p, const glm::mat4& v)
   glBindVertexArray(0);
 }
 
-void TexturedCube::drawMode(int mode) {
-	if (mode == 0) {
-		texID = cubeMap_l;
-	}
-	else if (mode == 1) {
-		texID = cubeMap_r;
-	}
-	else {
-		texID = cubeMap_l;
-	}
-}
+

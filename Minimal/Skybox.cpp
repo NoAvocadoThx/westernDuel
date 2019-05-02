@@ -22,7 +22,3 @@ void Skybox::draw(unsigned skyboxShader, const glm::mat4& p, const glm::mat4& v)
   glDepthMask(GL_TRUE);
   glCullFace(GL_FRONT);
 }
-
-void Skybox::drawMode(int i) {
-	TexturedCube::drawMode(i);
-}
