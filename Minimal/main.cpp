@@ -43,7 +43,7 @@ limitations under the License.
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/quaternion.hpp>
+#include <boost/circular_buffer.hpp>
 #include "Skybox.h"
 #include "Model.h"
 #include "Mesh.h"
@@ -63,6 +63,10 @@ using glm::quat;
 double iod = 0.0;
 double original_iod = 0.0;
 glm::vec3 handPos;
+int frameLag=0;
+
+boost::circular_buffer<glm::mat4> ringBuf(30);
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // GLEW gives cross platform access to OpenGL 3.x+ functionality.  
@@ -772,6 +776,9 @@ protected:
 // a class for building and rendering cubes
 class Scene
 {
+
+
+  
   // Program
   std::vector<glm::mat4> instance_positions;
   GLuint instanceCount;
@@ -782,10 +789,11 @@ class Scene
   std::unique_ptr<TexturedCube> cube;
   std::unique_ptr<Skybox> skybox_l;
   std::unique_ptr<Skybox> skybox_r;
+  std::unique_ptr<Skybox> skybox;
 
   Model* sphere;
 
-
+  
 
   const unsigned int GRID_SIZE{5};
 
@@ -794,6 +802,8 @@ public:
 	bool buttonAPressed = false, buttonBPressed = false, buttonXPressed = false;
 	float scalor = 0.1f;
 	int eye;
+
+	glm::mat4 camMtx;
 
   Scene()
   {
@@ -814,6 +824,8 @@ public:
 	skybox_l->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
 	skybox_r = std::make_unique<Skybox>("skybox_r");
 	skybox_r->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
+	skybox = std::make_unique<Skybox>("skybox");
+	skybox->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
   }
 
   ~Scene() {
@@ -838,7 +850,7 @@ public:
 	  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 	  sphere->Draw(sphereShader);
 
-
+	  glUseProgram(shaderID);
 	  if (buttonX == 0||buttonX==1) {
 		  if (left) {
 			  // Render Skybox : remove view translation
@@ -859,6 +871,9 @@ public:
 	  }
 	  else if (buttonX == 2) {
 		  skybox_l->draw(shaderID, projection, view);
+	  }
+	  else if (buttonX == 3) {
+		  skybox->draw(shaderID, projection, view);
 	  }
     
     
@@ -885,6 +900,7 @@ protected:
     glEnable(GL_DEPTH_TEST);
     ovr_RecenterTrackingOrigin(_session);
     scene = std::shared_ptr<Scene>(new Scene());
+	std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
   }
 
   void shutdownGl() override
@@ -904,7 +920,7 @@ protected:
 		  }
 		  if (inputState.Buttons & ovrButton_X) scene->buttonXPressed = true;
 		  else if (scene->buttonXPressed) {
-			  scene->buttonX = (scene->buttonX + 1) % 3; scene->buttonXPressed = false;
+			  scene->buttonX = (scene->buttonX + 1) % 4; scene->buttonXPressed = false;
 		  }
 
 		  if (inputState.Buttons & ovrButton_RThumb) iod = original_iod;
@@ -916,6 +932,14 @@ protected:
 		  else {
 			  if (inputState.Thumbstick[ovrHand_Left].x > 0.5f) scene->scalor = std::min(scene->scalor + 0.001f, 0.5f);
 			  else if (inputState.Thumbstick[ovrHand_Left].x < -0.5f) scene->scalor = std::max(scene->scalor - 0.001f, 0.01f);
+		  }
+		  if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
+			  frameLag++;
+			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
+		  }
+		  if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) {
+			  frameLag--;
+			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
 		  }
 		  
 	  }

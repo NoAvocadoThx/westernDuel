@@ -108,18 +108,31 @@ std::vector<std::string> faces_r
   "front_r.ppm"
 };
 
+std::vector<std::string> faces_ec
+{
+  "nx.ppm",
+  "px.ppm",
+  "py.ppm",
+  "ny.ppm",
+  "nz.ppm",
+  "pz.ppm"
+};
+
 TexturedCube::TexturedCube(const std::string dir) : Cube()
 {
 	if (dir == "skybox_r") {
 
-		cubeMap_r = loadCubemap("./" + dir + "/", faces_r);
+		texID = loadCubemap("./" + dir + "/", faces_r);
 	}
 	else if(dir=="skybox_l"){
-	    cubeMap_l = loadCubemap("./" + dir + "/", faces);
+	    texID = loadCubemap("./" + dir + "/", faces);
     }
 	else if (dir == "cube") {
 		cubeMap_l= loadCubemap("./" + dir + "/", faces);
 		texID = cubeMap_l;
+	}
+	else if (dir == "skybox") {
+		texID = loadCubemap("./" + dir + "/", faces_ec);
 	}
 }
 
