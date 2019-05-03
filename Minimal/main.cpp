@@ -72,7 +72,7 @@ glm::mat4 camMt;
 glm::mat4 ctrMt;
 
 boost::circular_buffer<glm::mat4> ringBuf(30);
-boost::circular_buffer<glm::mat4> ctrBuf(30);
+boost::circular_buffer<glm::vec3> ctrBuf(30);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -671,9 +671,8 @@ protected:
 	  ovrVector3f handPosition[2];
 	  handPosition[0] = handPoses[0].Position;
 	  handPosition[1] = handPoses[1].Position;
-	  handPos.x = handPosition[ovrHand_Right].x;
-	  handPos.y = handPosition[ovrHand_Right].y;
-	  handPos.z = handPosition[ovrHand_Right].z;
+	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
+	  handPos = ctrBuf.at(frameLag%30);
 
 
 
@@ -953,7 +952,7 @@ protected:
 		  else if(scene->RTPressed){
 			  frameLag++;
 			  frameLag = std::min(30, frameLag);
-			  ringBuf.push_back(camMt);
+			  //ringBuf.push_back(camMt);
 			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
 			  scene->RTPressed = false;
 		  }
@@ -961,7 +960,7 @@ protected:
 		  else if (scene->LTPressed) {
 			  frameLag--;
 			  frameLag = std::max(0, frameLag);
-			  ringBuf.pop_back();
+			 // ringBuf.pop_back();
 			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
 			  scene->LTPressed = false;
 		  }
@@ -990,8 +989,8 @@ protected:
 	  
 	  camMt = headPose;
 	
-
-	  scene->render(projection, glm::inverse(ringBuf.back()), left);
+	  ringBuf.push_back(camMt);
+	  scene->render(projection, glm::inverse(ringBuf.at(frameLag%30)), left);
 	
   }
   int getAState() { return scene->buttonA; }
