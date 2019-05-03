@@ -66,7 +66,7 @@ glm::vec3 handPos;
 int frameLag=0;
 int renderLag = 0;
 int last;
-
+bool isLeft = false;
 int frameCtr=0;
 int frameHead = 0;
 bool render = true;
@@ -79,6 +79,10 @@ glm::mat4 prevPose;
 
 boost::circular_buffer<glm::mat4> ringBuf(30);
 boost::circular_buffer<glm::vec3> ctrBuf(30);
+
+
+bool RT;
+bool LT;
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -678,7 +682,16 @@ protected:
 	  handPosition[0] = handPoses[0].Position;
 	  handPosition[1] = handPoses[1].Position;
 	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
-	  handPos = ctrBuf.at(frameLag++%30);
+	  if (RT) {
+		  frameCtr++;
+		  frameCtr = std::min(30, frameCtr++);
+
+	  }
+	  else if(LT){
+		  frameCtr--;
+		  frameCtr = std::max(0, frameCtr);
+	  }
+	   handPos = ctrBuf.at(frameCtr%30);
 
 
 
@@ -726,30 +739,37 @@ protected:
 		//left eye only (right eye black), right eye only (left eye black), inverted stereo
 		if (getAState() == 0) {
 			if (eye == ovrEye_Left) {
+				isLeft = true;
 				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
 			}
 			else {
+				isLeft = false;
 				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
 			}
 		}
 		else if (getAState() == 1) {
+			isLeft = true;
 			renderScene(_eyeProjections[eye], ovr::toGlm(renderEye[ovrEye_Left]), true);
 		}
 		else if (getAState() == 2) {
 			if (eye == ovrEye_Left) {
+				isLeft = true;
 				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
 			}
 		}
 		else if (getAState() == 3) {
 			if (eye == ovrEye_Right) {
+				isLeft = false;
 				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
 			}
 		}
 		else {
 			if (eye == ovrEye_Left) {
+				isLeft = false;
 				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
 			}
 			else {
+				isLeft = true;
 				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
 			}
 		
@@ -954,21 +974,29 @@ protected:
 			  else if (inputState.Thumbstick[ovrHand_Left].x < -0.5f) scene->scalor = std::max(scene->scalor - 0.001f, 0.01f);
 		  }
 		  //index
-		  if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) scene->RTPressed = true;
+		  if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
+			  scene->RTPressed = true;
+			  RT = true;
+		  }
 		  else if(scene->RTPressed){
 			  frameLag++;
-			  frameLag = std::min(30, frameLag);
+			  frameLag = std::min(30, frameLag++);
 			  //ringBuf.push_back(camMt);
 			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
 			  scene->RTPressed = false;
+			  RT = false;
 		  }
-		  if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) scene->LTPressed = true;
+		  if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) {
+			  scene->LTPressed = true;
+			  RT = true;
+		  }
 		  else if (scene->LTPressed) {
 			  frameLag--;
-			  frameLag = std::max(0, frameLag);
-			 // ringBuf.pop_back();
+			  frameLag = std::max(0, frameLag--);
+			  ringBuf.pop_back();
 			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
 			  scene->LTPressed = false;
+			  RT = false;
 		  }
 
 		  //hand
@@ -983,16 +1011,28 @@ protected:
 		  else if (scene->LHPressed) {
 			  renderLag--;
 			  renderLag = std::max(0, renderLag--);
+			  
 			  std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
 			  scene->LHPressed = false;
 		  }
 
-		  if (inputState.Buttons & ovrButton_Y) scene->buttonYPressed = true;
-		  else if (scene->buttonYPressed) {
-			  if (superRot) superRot = false;
-			  else superRot = true;
+		  if (inputState.Buttons & ovrButton_Y) {
+			  scene->buttonYPressed = true;
 		  }
-		  
+		  else if (scene->buttonYPressed) {
+			  if (superRot) {
+				  scene->buttonYPressed = false;
+				  std::cout << "super rotation deactivated!\n";
+				  superRot = false;
+			  }
+
+			  else {
+				  scene->buttonYPressed = false;
+				  std::cout << "super rotation activated!\n";
+				  superRot = true;
+			  }
+
+		  }
 	  }
   }
 
@@ -1025,25 +1065,43 @@ protected:
 	  Sleep(renderLag * 2);
 
 	  camMt = headPose;
-
+	 
 	  ringBuf.push_back(camMt);
 	  if (superRot) {
 		  glm::mat3 temp = glm::mat3(curPose[0], curPose[1], curPose[2]);
 		  float x = atan2f(temp[0][0], temp[0][2]);
-		  float y = atan2f(temp[1][1], temp[2][1]);
+		  float y = atan2f(-temp[1][1], temp[2][1]);
 		  float z = atan2f(-temp[0][1], sqrt(pow(temp[1][1], 2) + pow(temp[2][1], 2)));
-		  glm::mat3 temp2 = rotation(z, x*2, y);
+		  glm::mat3 temp2 = rotation(x, -y*2, z);
 		  glm::mat4 T = glm::mat4(temp2);
 		  T[3] = curPose[3];
 		  scene->render(projection, glm::inverse(T), left);
 	 }
 	  else {
-		  
-		  //or 30-framLag+frameHead%30
-		  scene->render(projection, glm::inverse(ringBuf.at((frameLag + frameHead) % 30)), left);
-		  
+		  if (frameLag == 0) {
+			  scene->render(projection, glm::inverse(headPose), left);
+
+		  }
+		  else {
+			  if (isLeft) {
+				  int tempIndex = std::max(0, (frameHead - frameLag) % 30);
+				  if (tempIndex < 0) tempIndex = 0;
+				  //or 30-framLag+frameHead%30
+				  glm::mat4 prevMat = ringBuf.at(tempIndex);
+				  scene->render(projection, glm::inverse(prevMat), true);
+			  }
+			  else {
+				  int tempIndex = std::max(0, (frameHead - frameLag) % 30);
+				  if (tempIndex < 0) tempIndex = 0;
+				  //or 30-framLag+frameHead%30
+				  glm::mat4 prevMat = ringBuf.at(tempIndex);
+				  scene->render(projection, glm::inverse(prevMat), false);
+			  }
+
+		  }
 	  }
-	  frameHead++;
+	 // std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
+	  ++frameHead;
   }
   int getAState() { return scene->buttonA; }
   int getBState() { return scene->buttonB; }
