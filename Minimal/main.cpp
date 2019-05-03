@@ -70,9 +70,12 @@ int last;
 int frameCtr=0;
 int frameHead = 0;
 bool render = true;
+bool superRot = false;
 glm::mat4 prevMt;
 glm::mat4 camMt;
 glm::mat4 ctrMt;
+glm::mat4 curPose;
+glm::mat4 prevPose;
 
 boost::circular_buffer<glm::mat4> ringBuf(30);
 boost::circular_buffer<glm::vec3> ctrBuf(30);
@@ -815,7 +818,7 @@ class Scene
 public:
 	int buttonA = 0, buttonB = 0, buttonX = 0;
 	bool buttonAPressed = false, buttonBPressed = false, buttonXPressed = false,LTPressed=false,RTPressed=false;
-	bool LHPressed = false, RHPressed = false;
+	bool LHPressed = false, RHPressed = false, buttonYPressed=false;
 	float scalor = 0.1f;
 	int eye;
 
@@ -983,24 +986,72 @@ protected:
 			  std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
 			  scene->LHPressed = false;
 		  }
+
+		  if (inputState.Buttons & ovrButton_Y) scene->buttonYPressed = true;
+		  else if (scene->buttonYPressed) {
+			  if (superRot) superRot = false;
+			  else superRot = true;
+		  }
 		  
 	  }
   }
+
+  mat3 rotation(float rotX, float rotY, float rotZ) {
+	  mat3 X, Y, Z = mat3(1.0f);
+
+	  X[1][1] = cosf(rotX);
+	  X[2][1] = -sinf(rotX);
+	  X[1][2] = sinf(rotX);
+	  X[2][2] = cosf(rotX);
+
+	  Y[0][0] = cosf(rotY);
+	  Y[0][2] = -sinf(rotY);
+	  Y[2][0] = sinf(rotY);
+	  Y[2][2] = cosf(rotY);
+
+	  Z[0][0] = cosf(rotZ);
+	  Z[0][1] = sinf(rotZ);
+	  Z[1][0] = -sinf(rotZ);
+	  Z[1][1] = cosf(rotZ);
+
+	  mat3 M = Z * Y * X;
+	  return M;
+  }
+
+
   void renderScene(const glm::mat4& projection, const glm::mat4& headPose,bool left) override
   {
+	  curPose = headPose;
 	  Sleep(renderLag * 2);
-	  
+
 	  camMt = headPose;
-	
+
 	  ringBuf.push_back(camMt);
-	  //or 30-framLag+frameHead%30
-	  scene->render(projection, glm::inverse(ringBuf.at((frameLag+frameHead)%30)), left);
+	  if (superRot) {
+		  glm::mat3 temp = glm::mat3(curPose[0], curPose[1], curPose[2]);
+		  float x = atan2f(temp[0][0], temp[0][2]);
+		  float y = atan2f(temp[1][1], temp[2][1]);
+		  float z = atan2f(-temp[0][1], sqrt(pow(temp[1][1], 2) + pow(temp[2][1], 2)));
+		  glm::mat3 temp2 = rotation(z, x*2, y);
+		  glm::mat4 T = glm::mat4(temp2);
+		  T[3] = curPose[3];
+		  scene->render(projection, glm::inverse(T), left);
+	 }
+	  else {
+		  
+		  //or 30-framLag+frameHead%30
+		  scene->render(projection, glm::inverse(ringBuf.at((frameLag + frameHead) % 30)), left);
+		  
+	  }
 	  frameHead++;
   }
   int getAState() { return scene->buttonA; }
   int getBState() { return scene->buttonB; }
   int getXState() { return scene->buttonX; }
 };
+
+
+
 
 // Execute our example class
 int main(int argc, char** argv)
