@@ -66,6 +66,9 @@ glm::vec3 handPos;
 int frameLag=0;
 int renderLag = 0;
 int last;
+
+int frameCtr=0;
+int frameHead = 0;
 bool render = true;
 glm::mat4 prevMt;
 glm::mat4 camMt;
@@ -672,7 +675,7 @@ protected:
 	  handPosition[0] = handPoses[0].Position;
 	  handPosition[1] = handPoses[1].Position;
 	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
-	  handPos = ctrBuf.at(frameLag%30);
+	  handPos = ctrBuf.at(frameLag++%30);
 
 
 
@@ -990,8 +993,9 @@ protected:
 	  camMt = headPose;
 	
 	  ringBuf.push_back(camMt);
-	  scene->render(projection, glm::inverse(ringBuf.at(frameLag%30)), left);
-	
+	  //or 30-framLag+frameHead%30
+	  scene->render(projection, glm::inverse(ringBuf.at((frameLag+frameHead)%30)), left);
+	  frameHead++;
   }
   int getAState() { return scene->buttonA; }
   int getBState() { return scene->buttonB; }
