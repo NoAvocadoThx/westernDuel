@@ -28,8 +28,8 @@ limitations under the License.
 
 #define FAIL(X) throw std::runtime_error(X)
 
-#define FRAG "../shader.frag"
-#define VERT "../shader.vert"
+#define FRAG "shader.frag"
+#define VERT "shader.vert"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -64,8 +64,15 @@ double iod = 0.0;
 double original_iod = 0.0;
 glm::vec3 handPos;
 int frameLag=0;
+int renderLag = 0;
+int last;
+bool render = true;
+glm::mat4 prevMt;
+glm::mat4 camMt;
+glm::mat4 ctrMt;
 
 boost::circular_buffer<glm::mat4> ringBuf(30);
+boost::circular_buffer<glm::mat4> ctrBuf(30);
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -658,12 +665,18 @@ protected:
 								// ovrVector3f  Position;
 	  handPoses[0] = trackState.HandPoses[0].ThePose;
 	  handPoses[1] = trackState.HandPoses[1].ThePose;
+
+	  
+
 	  ovrVector3f handPosition[2];
 	  handPosition[0] = handPoses[0].Position;
 	  handPosition[1] = handPoses[1].Position;
 	  handPos.x = handPosition[ovrHand_Right].x;
 	  handPos.y = handPosition[ovrHand_Right].y;
 	  handPos.z = handPosition[ovrHand_Right].z;
+
+
+
     ovrPosef eyePoses[2];
     ovr_GetEyePoses(_session, frame, true, _viewScaleDesc.HmdToEyePose, eyePoses, &_sceneLayer.SensorSampleTime);
 
@@ -799,11 +812,12 @@ class Scene
 
 public:
 	int buttonA = 0, buttonB = 0, buttonX = 0;
-	bool buttonAPressed = false, buttonBPressed = false, buttonXPressed = false;
+	bool buttonAPressed = false, buttonBPressed = false, buttonXPressed = false,LTPressed=false,RTPressed=false;
+	bool LHPressed = false, RHPressed = false;
 	float scalor = 0.1f;
 	int eye;
 
-	glm::mat4 camMtx;
+	
 
   Scene()
   {
@@ -818,7 +832,7 @@ public:
 	sphereShader = LoadShaders(VERT, FRAG);
 	//models
     cube = std::make_unique<TexturedCube>("cube"); 
-	sphere = new Model("../model/sphere.obj");
+	sphere = new Model("sphere.obj");
 	  // 10m wide sky box: size doesn't matter though
     skybox_l = std::make_unique<Skybox>("skybox_l");
 	skybox_l->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
@@ -901,6 +915,7 @@ protected:
     ovr_RecenterTrackingOrigin(_session);
     scene = std::shared_ptr<Scene>(new Scene());
 	std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
+	std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
   }
 
   void shutdownGl() override
@@ -933,20 +948,51 @@ protected:
 			  if (inputState.Thumbstick[ovrHand_Left].x > 0.5f) scene->scalor = std::min(scene->scalor + 0.001f, 0.5f);
 			  else if (inputState.Thumbstick[ovrHand_Left].x < -0.5f) scene->scalor = std::max(scene->scalor - 0.001f, 0.01f);
 		  }
-		  if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
+		  //index
+		  if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) scene->RTPressed = true;
+		  else if(scene->RTPressed){
 			  frameLag++;
+			  frameLag = std::min(30, frameLag);
+			  ringBuf.push_back(camMt);
 			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
+			  scene->RTPressed = false;
 		  }
-		  if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) {
+		  if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) scene->LTPressed = true;
+		  else if (scene->LTPressed) {
 			  frameLag--;
+			  frameLag = std::max(0, frameLag);
+			  ringBuf.pop_back();
 			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
+			  scene->LTPressed = false;
+		  }
+
+		  //hand
+		  if (inputState.HandTrigger[ovrHand_Right] > 0.5f) scene->RHPressed = true;
+		  else if (scene->RHPressed) {
+			  renderLag++;
+			  renderLag = std::min(10, renderLag++);
+			  std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
+			  scene->RHPressed = false;
+		  }
+		  if (inputState.HandTrigger[ovrHand_Left] > 0.5f) scene->LHPressed = true;
+		  else if (scene->LHPressed) {
+			  renderLag--;
+			  renderLag = std::max(0, renderLag--);
+			  std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
+			  scene->LHPressed = false;
 		  }
 		  
 	  }
   }
   void renderScene(const glm::mat4& projection, const glm::mat4& headPose,bool left) override
   {
-    scene->render(projection, glm::inverse(headPose),left);
+	  Sleep(renderLag * 2);
+	  
+	  camMt = headPose;
+	
+
+	  scene->render(projection, glm::inverse(ringBuf.back()), left);
+	
   }
   int getAState() { return scene->buttonA; }
   int getBState() { return scene->buttonB; }
