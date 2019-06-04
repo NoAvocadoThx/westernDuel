@@ -37,8 +37,11 @@ public:
 	glm::mat4 toWorld;
 	std::vector<glm::vec3> boxVertices;
 	std::vector<GLfloat> boundingbox;
-	//for character
+	//for character's shooting mechanics
 	bool dying;
+	int duration = 150;
+
+
 	float minx, miny, minz, maxx, maxy, maxz;
 	float minX, maxX, minY, maxY, maxZ, minZ;
 	float centerx, centery, centerz;
@@ -246,6 +249,12 @@ public:
 		boundingbox.push_back(maxY);
 		boundingbox.push_back(minZ);
 
+	}
+	void fire() {
+		glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), viewdir); //
+		//glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+		toWorld = translateMat * toWorld;
+		duration--;
 	}
 
 private:

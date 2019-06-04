@@ -70,6 +70,7 @@ int frameLag=0;
 int renderLag = 0;
 int last;
 bool isLeft = false;
+bool fire = false;
 int frameCtr=0;
 int frameHead = 0;
 bool render = true;
@@ -848,6 +849,9 @@ public:
 	//initialize bounding boxes
 	bulletBounding = new BoundingBox(bullet->boundingbox, bullet->boxVertices);
 	bulletBounding->toWorld = bullet->toWorld;
+	//TODO
+	//temp model bouding box
+	
   }
 
   ~Scene() {
@@ -862,7 +866,7 @@ public:
   {
 	  glm::mat4 inverse = glm::translate(glm::mat4(1.0f), -handPos);
 	  glm::mat4 T = glm::translate(glm::mat4(1.0f), handPos);
-	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.14f, 0.14f, 0.14f));
+	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
 	  glm::mat4 modelMatrix = T * scale*inverse;
 	  glUseProgram(sphereShader);
 	  uProjection = glGetUniformLocation(sphereShader, "projection");
@@ -873,6 +877,13 @@ public:
 	  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 	  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 	  sphere->Draw(sphereShader);
+	  if (fire) {
+		  bullet = new Model("sphere.obj");
+
+		  //bullet->toWorld = gun->toworld;
+		  bullet->Draw(sphereShader);
+		  bullet->fire();
+	  }
 
 
 	  //show bouding boxes
@@ -890,8 +901,16 @@ public:
 	  else {
 		skybox_r->draw(shaderID, projection, view);
 	  }
+	  cube->toWorld = instance_positions[0] * glm::scale(glm::mat4(1.0f), glm::vec3(scalor));
+	  cube->draw(shaderID, projection, view);
 		
-
+	  if (fire) {
+		  bullet = new Model("sphere.obj");
+		  
+		  //bullet->toWorld = gun->toworld;
+		  bullet->Draw(sphereShader);
+		  bullet->fire();
+	  }
     
     
   }
@@ -986,13 +1005,13 @@ protected:
 		  //index
 		  if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
 			  scene->RTPressed = true;
+			  fire = true;
 			  RT = true;
 		  }
 		  else if(scene->RTPressed){
 			  frameLag++;
 			  frameLag = std::min(30, frameLag++);
-			  //ringBuf.push_back(camMt);
-			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
+			  fire = false;
 			  scene->RTPressed = false;
 			  RT = false;
 		  }
