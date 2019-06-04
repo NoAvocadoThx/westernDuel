@@ -35,6 +35,11 @@ limitations under the License.
 #define BULLET_FRAG "bullet.frag"
 #define BULLET_VERT "bullet.vert"
 
+
+//sound path
+#define SOUND_PATH "sound/gun_shot.mp3"
+#define SHELL_PATH "sound/shell_falls"
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 // GLM is a C++ math library meant to mirror the syntax of GLSL 
@@ -52,6 +57,7 @@ limitations under the License.
 #include "Model.h"
 #include "Mesh.h"
 #include "BoundingBox.h"
+#include "irrKlang.h"
 
 // Import the most commonly used types into the default namespace
 using glm::ivec3;
@@ -90,6 +96,8 @@ glm::mat4 prevPose;
 
 boost::circular_buffer<glm::mat4> ringBuf(30);
 boost::circular_buffer<glm::vec3> ctrBuf(30);
+// Sound System
+irrklang::ISoundEngine * SoundEngine1;
 
 
 bool RT;
@@ -865,15 +873,20 @@ public:
 	bulletBounding->toWorld = bullet->toWorld;
 	//TODO
 	//temp model bouding box
+
+	//init sound
+	SoundEngine1 = irrklang::createIrrKlangDevice();
 	
   }
 
   ~Scene() {
 	  delete(sphere);
 	  delete(bulletBounding);
+	  delete(SoundEngine1);
 	  glDeleteProgram(shaderID);
 	  glDeleteProgram(sphereShader);
 	  glDeleteProgram(boundingShader);
+	  glDeleteProgram(bulletShader);
   }
 
   void render(const glm::mat4& projection, const glm::mat4& view,bool left)
@@ -917,6 +930,9 @@ public:
 		  }
 		  bullet->viewdir = shootDir;
 		  bullet->fire();
+		  SoundEngine1->play2D(SOUND_PATH, GL_TRUE);
+		  SoundEngine1->play2D(SHELL_PATH, GL_TRUE);
+		  SoundEngine1->stopAllSounds();
 	  }
 	  if (bullet->duration == 0) {
 		  finishFire = true;
@@ -925,7 +941,8 @@ public:
 		  bullet->duration = 150;
 		
 	  }
-
+	
+	 
 	  //show bouding boxes
 	  if (showBounding) {
 		  glUseProgram(boundingShader);
