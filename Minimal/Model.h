@@ -42,6 +42,7 @@ public:
 	float minx, miny, minz, maxx, maxy, maxz;
 	float minX, maxX, minY, maxY, maxZ, minZ;
 	float centerx, centery, centerz;
+	glm::vec3 viewdir;
 	vector<Vertex> vertices;
 	vector<unsigned int> indices;
 	/*  Functions   */
