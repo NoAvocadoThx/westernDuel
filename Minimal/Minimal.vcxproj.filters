@@ -57,6 +57,12 @@
     <None Include="bounding.frag">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="bullet.frag">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="bullet.vert">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Cube.h">

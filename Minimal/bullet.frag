@@ -6,5 +6,5 @@ out vec4 color;
 uniform int colorValue;
 
 void main(void) {
-  color = vec4(Normal, 0.2);
+  color = vec4(0.3,0.2,0.1, 0.2);
 }

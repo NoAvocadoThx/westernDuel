@@ -32,6 +32,8 @@ limitations under the License.
 #define SPHERE_VERT "shader.vert"
 #define BOUNDING_FRAG "bounding.frag"
 #define BOUNDING_VERT "bounding.vert"
+#define BULLET_FRAG "bullet.frag"
+#define BULLET_VERT "bullet.vert"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -65,17 +67,21 @@ using glm::quat;
 
 double iod = 0.0;
 double original_iod = 0.0;
-glm::vec3 handPos;
 int frameLag=0;
 int renderLag = 0;
 int last;
 bool isLeft = false;
 bool fire = false;
+bool finishFire;
 int frameCtr=0;
 int frameHead = 0;
 bool render = true;
 bool superRot = false;
 bool showBounding = false;
+
+glm::vec3 handPos;
+glm::vec3 shootDir;
+
 glm::mat4 prevMt;
 glm::mat4 camMt;
 glm::mat4 ctrMt;
@@ -686,7 +692,12 @@ protected:
 	  ovrVector3f handPosition[2];
 	  handPosition[0] = handPoses[0].Position;
 	  handPosition[1] = handPoses[1].Position;
+
+	  //get shooting direction
 	  glm::quat orientation=ovr::toGlm(handPoses[0].Orientation);
+	  glm::mat4 rotMtx = glm::mat4_cast(orientation);
+	  glm::vec4 forward = glm::inverse(rotMtx)*glm::vec4(0, 0, -1, 1);
+	  shootDir = glm::vec3(forward);
 	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
 	  if (RT) {
 		  frameCtr++;
@@ -798,6 +809,7 @@ class Scene
   GLuint shaderID;
   GLuint sphereShader;
   GLuint boundingShader;
+  GLuint bulletShader;
 
   GLuint uProjection, uModelview, model;
 
@@ -835,6 +847,7 @@ public:
     shaderID = LoadShaders("skybox.vert", "skybox.frag");
 	sphereShader = LoadShaders(SPHERE_VERT, SPHERE_FRAG);
 	boundingShader = LoadShaders(BOUNDING_VERT, BOUNDING_FRAG);
+	bulletShader = LoadShaders(BULLET_VERT, BULLET_FRAG);
 	//models
     cube = std::make_unique<TexturedCube>("cube"); 
 	sphere = new Model("sphere.obj");
@@ -867,7 +880,7 @@ public:
   {
 	  glm::mat4 inverse = glm::translate(glm::mat4(1.0f), -handPos);
 	  glm::mat4 T = glm::translate(glm::mat4(1.0f), handPos);
-	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.14f, 0.14f, 0.14f));
 	  glm::mat4 modelMatrix = T * scale*inverse;
 	  glUseProgram(sphereShader);
 	  uProjection = glGetUniformLocation(sphereShader, "projection");
@@ -878,14 +891,37 @@ public:
 	  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 	  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 	  sphere->Draw(sphereShader);
-	  if (fire) {
+	 
+	  if (!fire) {
+		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
+		  T = glm::translate(glm::mat4(1.0f), handPos);
+		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+		  modelMatrix = T * scale*inverse;
+		  glUseProgram(bulletShader);
+		  uProjection = glGetUniformLocation(bulletShader, "projection");
+		  uModelview = glGetUniformLocation(bulletShader, "view");
+		  model = glGetUniformLocation(bulletShader, "model");
+		  // Now send these values to the shader program
+		  glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
+	  }
+	  else if (fire) {
 		  bullet = new Model("sphere.obj");
 
+
 		  //bullet->toWorld = gun->toworld;
-		  bullet->Draw(sphereShader);
+		  bullet->Draw(bulletShader);
+		  bullet->viewdir = shootDir;
 		  bullet->fire();
 	  }
-
+	  if (bullet->duration == 0) {
+		  finishFire = true;
+	  }
+	  if (finishFire) {
+		  bullet->duration = 150;
+		
+	  }
 
 	  //show bouding boxes
 	  if (showBounding) {
