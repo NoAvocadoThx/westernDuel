@@ -686,6 +686,7 @@ protected:
 	  ovrVector3f handPosition[2];
 	  handPosition[0] = handPoses[0].Position;
 	  handPosition[1] = handPoses[1].Position;
+	  glm::quat orientation=ovr::toGlm(handPoses[0].Orientation);
 	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
 	  if (RT) {
 		  frameCtr++;
