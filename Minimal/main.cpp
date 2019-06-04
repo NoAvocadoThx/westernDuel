@@ -839,9 +839,9 @@ public:
 	bullet = new Model("sphere.obj");
 	bullet->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
 	  // 10m wide sky box: size doesn't matter though
-    skybox_l = std::make_unique<Skybox>("skybox_l");
+    skybox_l = std::make_unique<Skybox>("skybox");
 	skybox_l->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
-	skybox_r = std::make_unique<Skybox>("skybox_r");
+	skybox_r = std::make_unique<Skybox>("skybox");
 	skybox_r->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
 	skybox = std::make_unique<Skybox>("skybox");
 	skybox->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
@@ -880,31 +880,18 @@ public:
 		  glUseProgram(boundingShader);
 		  bulletBounding->draw(boundingShader, projection, view);
 	  }
+	  //draw skybox
 	  glUseProgram(shaderID);
-	  if (buttonX == 0||buttonX==1) {
-		  if (left) {
-			  // Render Skybox : remove view translation
-			  skybox_l->draw(shaderID, projection, view);
-		  }
-		  else {
-			  skybox_r->draw(shaderID, projection, view);
-		  }
-		  if (buttonX == 0) {
-			  // Render two cubes
-			  for (int i = 0; i < instanceCount; i++)
-			  {
-				  // Scale to 20cm: 200cm * 0.1
-				  cube->toWorld = instance_positions[i] * glm::scale(glm::mat4(1.0f), glm::vec3(scalor));
-				  cube->draw(shaderID, projection, view);
-			  }
-		  }
+	
+	  if (left) {
+	    // Render Skybox : remove view translation
+	    skybox_l->draw(shaderID, projection, view);
 	  }
-	  else if (buttonX == 2) {
-		  skybox_l->draw(shaderID, projection, view);
+	  else {
+		skybox_r->draw(shaderID, projection, view);
 	  }
-	  else if (buttonX == 3) {
-		  skybox->draw(shaderID, projection, view);
-	  }
+		
+
     
     
   }
