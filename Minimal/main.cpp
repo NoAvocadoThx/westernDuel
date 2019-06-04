@@ -911,7 +911,10 @@ public:
 
 
 		  //bullet->toWorld = gun->toworld;
-		  bullet->Draw(bulletShader);
+		  if (bullet->duration != 0) {
+			  bullet->Draw(bulletShader);
+			  finishFire = false;
+		  }
 		  bullet->viewdir = shootDir;
 		  bullet->fire();
 	  }
