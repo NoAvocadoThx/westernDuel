@@ -28,8 +28,10 @@ limitations under the License.
 
 #define FAIL(X) throw std::runtime_error(X)
 
-#define FRAG "shader.frag"
-#define VERT "shader.vert"
+#define SPHERE_FRAG "shader.frag"
+#define SPHERE_VERT "shader.vert"
+#define BOUNDING_FRAG "bounding.frag"
+#define BOUNDING_VERT "bounding.vert"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -47,6 +49,7 @@ limitations under the License.
 #include "Skybox.h"
 #include "Model.h"
 #include "Mesh.h"
+#include "BoundingBox.h"
 
 // Import the most commonly used types into the default namespace
 using glm::ivec3;
@@ -71,6 +74,7 @@ int frameCtr=0;
 int frameHead = 0;
 bool render = true;
 bool superRot = false;
+bool showBounding = false;
 glm::mat4 prevMt;
 glm::mat4 camMt;
 glm::mat4 ctrMt;
@@ -734,46 +738,15 @@ protected:
 		const auto& vp = _sceneLayer.Viewport[eye];
 		glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
 		_sceneLayer.RenderPose[eye] = eyePoses[eye];
-
-		//Cycle between the following four modes with the 'A' button: 3D stereo, mono (the same image rendered on both eyes), 
-		//left eye only (right eye black), right eye only (left eye black), inverted stereo
-		if (getAState() == 0) {
-			if (eye == ovrEye_Left) {
-				isLeft = true;
-				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
-			}
-			else {
-				isLeft = false;
-				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
-			}
-		}
-		else if (getAState() == 1) {
-			isLeft = true;
-			renderScene(_eyeProjections[eye], ovr::toGlm(renderEye[ovrEye_Left]), true);
-		}
-		else if (getAState() == 2) {
-			if (eye == ovrEye_Left) {
-				isLeft = true;
-				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
-			}
-		}
-		else if (getAState() == 3) {
-			if (eye == ovrEye_Right) {
-				isLeft = false;
-				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
-			}
-		}
-		else {
-			if (eye == ovrEye_Left) {
-				isLeft = false;
-				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
-			}
-			else {
-				isLeft = true;
-				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
-			}
 		
-		}
+			if (eye == ovrEye_Left) {
+				isLeft = true;
+				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
+			}
+			else {
+				isLeft = false;
+				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
+			}
 
 	});
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
@@ -822,6 +795,8 @@ class Scene
   GLuint instanceCount;
   GLuint shaderID;
   GLuint sphereShader;
+  GLuint boundingShader;
+
   GLuint uProjection, uModelview, model;
 
   std::unique_ptr<TexturedCube> cube;
@@ -830,6 +805,8 @@ class Scene
   std::unique_ptr<Skybox> skybox;
 
   Model* sphere;
+  Model* bullet;
+  BoundingBox* modelBounding,*bulletBounding;
 
   
 
@@ -854,10 +831,13 @@ public:
 
     // Shader Program 
     shaderID = LoadShaders("skybox.vert", "skybox.frag");
-	sphereShader = LoadShaders(VERT, FRAG);
+	sphereShader = LoadShaders(SPHERE_VERT, SPHERE_FRAG);
+	boundingShader = LoadShaders(BOUNDING_VERT, BOUNDING_FRAG);
 	//models
     cube = std::make_unique<TexturedCube>("cube"); 
 	sphere = new Model("sphere.obj");
+	bullet = new Model("sphere.obj");
+	bullet->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
 	  // 10m wide sky box: size doesn't matter though
     skybox_l = std::make_unique<Skybox>("skybox_l");
 	skybox_l->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
@@ -865,12 +845,17 @@ public:
 	skybox_r->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
 	skybox = std::make_unique<Skybox>("skybox");
 	skybox->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
+	//initialize bounding boxes
+	bulletBounding = new BoundingBox(bullet->boundingbox, bullet->boxVertices);
+	bulletBounding->toWorld = bullet->toWorld;
   }
 
   ~Scene() {
 	  delete(sphere);
+	  delete(bulletBounding);
 	  glDeleteProgram(shaderID);
 	  glDeleteProgram(sphereShader);
+	  glDeleteProgram(boundingShader);
   }
 
   void render(const glm::mat4& projection, const glm::mat4& view,bool left)
@@ -889,6 +874,12 @@ public:
 	  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 	  sphere->Draw(sphereShader);
 
+
+	  //show bouding boxes
+	  if (showBounding) {
+		  glUseProgram(boundingShader);
+		  bulletBounding->draw(boundingShader, projection, view);
+	  }
 	  glUseProgram(shaderID);
 	  if (buttonX == 0||buttonX==1) {
 		  if (left) {
@@ -916,6 +907,30 @@ public:
 	  }
     
     
+  }
+  void checkcollision() {
+	  std::vector<float> bound1 = bulletBounding->getBoundary();
+	  //TODO
+	  //model bounding hasnt been initialized since models are not done yet
+	  std::vector<float> bound2 = modelBounding->getBoundary();
+
+	  // check bound
+	  if (bound1[0] > bound2[1] && bound1[2] > bound2[3] && bound1[4] > bound2[5] &&
+		  bound1[1] < bound2[0] && bound1[3] < bound2[2] && bound1[5] < bound2[4]) {
+		  bulletBounding->collisionflag = true;
+		  modelBounding->collisionflag = true;
+		  //TODO
+		  //need a new model
+		  //Model->dying=true;
+	  }
+	  else {
+		  bulletBounding->collisionflag = false;
+		  modelBounding->collisionflag = false;
+	  }
+
+
+
+
   }
 
 };
@@ -948,11 +963,19 @@ protected:
     scene.reset();
   }
   void update() final override {
+
+	  //check collision
+	  scene->checkcollision();
+
+	  //handle button
 	  ovrInputState inputState;
 	  if (OVR_SUCCESS(ovr_GetInputState(_session, ovrControllerType_Touch, &inputState))) {
-		  if (inputState.Buttons & ovrButton_A) scene->buttonAPressed = true;
+		  if (inputState.Buttons & ovrButton_A) {
+			  scene->buttonAPressed = true;
+			  showBounding = true;
+		  }
 		  else if (scene->buttonAPressed) {
-			  scene->buttonA = (scene->buttonA + 1) % 5; scene->buttonAPressed = false;
+			  scene->buttonA = (scene->buttonA + 1) % 2; scene->buttonAPressed = false; showBounding = false;
 		  }
 		  if (inputState.Buttons & ovrButton_B) scene->buttonBPressed = true;
 		  else if (scene->buttonBPressed) {
@@ -1062,7 +1085,7 @@ protected:
   void renderScene(const glm::mat4& projection, const glm::mat4& headPose,bool left) override
   {
 	  curPose = headPose;
-	  Sleep(renderLag * 2);
+	  
 
 	  camMt = headPose;
 	 

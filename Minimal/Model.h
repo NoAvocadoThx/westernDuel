@@ -35,12 +35,22 @@ public:
 	string directory;
 	bool gammaCorrection;
 	glm::mat4 toWorld;
+	std::vector<glm::vec3> boxVertices;
+	std::vector<GLfloat> boundingbox;
+	//for character
+	bool dying;
+	float minx, miny, minz, maxx, maxy, maxz;
+	float minX, maxX, minY, maxY, maxZ, minZ;
+	float centerx, centery, centerz;
+	vector<Vertex> vertices;
+	vector<unsigned int> indices;
 	/*  Functions   */
 	// constructor, expects a filepath to a 3D model.
 	Model(string const &path, bool gamma = false) : gammaCorrection(gamma)
 	{
 		toWorld = glm::mat4(1.0f);
 		loadModel(path);
+		scaleProcess();
 	}
 
 	// draws the model, and thus all its meshes
@@ -48,6 +58,193 @@ public:
 	{
 		for (unsigned int i = 0; i < meshes.size(); i++)
 			meshes[i].Draw(shader);
+	}
+
+	void scaleProcess()
+	{
+		
+		maxx = -INFINITY;
+		maxy = -INFINITY;
+		maxz = -INFINITY;
+		minx = INFINITY;
+		miny = INFINITY;
+		minz = INFINITY;
+		//scalevalue = 3.0f;
+
+		for (unsigned int i = 0; i < vertices.size(); ++i)
+		{
+			//find maxx,maxy,maxz,minx,miny,minz
+			if (vertices[i].Position.x > maxx)
+			{
+				maxx = vertices[i].Position.x;
+			}
+			if (vertices[i].Position.y > maxy)
+			{
+				maxy = vertices[i].Position.y;
+			}
+			if (vertices[i].Position.z > maxz)
+			{
+				maxz = vertices[i].Position.z;
+			}
+			if (vertices[i].Position.x < minx)
+			{
+				minx = vertices[i].Position.x;
+			}
+			if (vertices[i].Position.y < miny)
+			{
+				miny = vertices[i].Position.y;
+			}
+			if (vertices[i].Position.z < minz)
+			{
+				minz = vertices[i].Position.z;
+			}
+		}
+
+		this->centerx = (maxx + minx) / 2;
+		this->centery = (maxy + miny) / 2;
+		this->centerz = (maxz + minz) / 2;
+		glm::vec3 center = glm::vec3(centerx, centery, centerz);
+		for (unsigned int i = 0; i < vertices.size(); i++) {
+
+			vertices[i].Position.x = (vertices[i].Position.x - this->centerx);
+			vertices[i].Position.y = (vertices[i].Position.y - this->centery);
+			vertices[i].Position.z = (vertices[i].Position.z - this->centerz);
+
+		}
+		float dimX, dimY, dimZ;
+		dimX = maxx - minx;
+		dimY = maxy - miny;
+		dimZ = maxz - minz;
+
+		// scale all vertices using the largest dimension, uniform scale
+		if (dimX >= dimY && dimX >= dimZ) {
+			for (int i = 0; i < vertices.size(); i++) {
+				vertices[i].Position = glm::vec3(vertices[i].Position.x / dimX, vertices[i].Position.y / dimX, vertices[i].Position.z / dimX);
+			}
+		}
+		else if (dimY >= dimX && dimY >= dimZ) {
+			for (int i = 0; i < vertices.size(); i++) {
+				vertices[i].Position = glm::vec3(vertices[i].Position.x / dimY, vertices[i].Position.y / dimY, vertices[i].Position.z / dimY);
+			}
+		}
+		else if (dimZ >= dimX && dimZ >= dimY) {
+			for (int i = 0; i < vertices.size(); i++) {
+				vertices[i].Position = glm::vec3(vertices[i].Position.x / dimZ, vertices[i].Position.y / dimZ, vertices[i].Position.z / dimZ);
+			}
+		}
+
+
+		minX = INFINITY, minY = INFINITY, minZ = INFINITY;   // min vertex
+		maxX = -INFINITY, maxY = -INFINITY, maxZ = -INFINITY;   // max vertex
+
+		glm::vec3 minVertX, minVertY, minVertZ;
+		glm::vec3 maxVertX, maxVertY, maxVertZ;
+
+		// search for bounding box dimension
+		for (int i = 0; i < vertices.size(); i++) {
+			if (vertices[i].Position.x < minX) {
+				minX = vertices[i].Position.x;
+				minVertX = vertices[i].Position;
+			}
+			if (vertices[i].Position.y < minY) {
+				minY = vertices[i].Position.y;
+				minVertY = vertices[i].Position;
+			}
+			if (vertices[i].Position.z < minZ) {
+				minZ = vertices[i].Position.z;
+				minVertZ = vertices[i].Position;
+			}
+			if (vertices[i].Position.x > maxX) {
+				maxX = vertices[i].Position.x;
+				maxVertX = vertices[i].Position;
+			}
+			if (vertices[i].Position.y > maxY) {
+				maxY = vertices[i].Position.y;
+				maxVertY = vertices[i].Position;
+			}
+			if (vertices[i].Position.z > maxZ) {
+				maxZ = vertices[i].Position.z;
+				maxVertZ = vertices[i].Position;
+			}
+		}
+
+		boxVertices.push_back(maxVertX);
+		boxVertices.push_back(minVertX);
+		boxVertices.push_back(maxVertY);
+		boxVertices.push_back(minVertY);
+		boxVertices.push_back(maxVertZ);
+		boxVertices.push_back(minVertZ);
+
+		// bounding box
+		boundingbox.push_back(minX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(maxZ);
+
+
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(maxZ);
+
+
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(maxZ);
+
+
+		boundingbox.push_back(minX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(maxZ);
+
+
+		boundingbox.push_back(minX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(maxZ);
+
+		boundingbox.push_back(minX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(minZ);
+
+
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(minZ);
+
+
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(minZ);
+
+
+		boundingbox.push_back(minX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(minZ);
+
+
+		boundingbox.push_back(minX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(minZ);
+
+		boundingbox.push_back(minX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(maxZ);
+		boundingbox.push_back(minX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(minZ);
+
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(maxZ);
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(minY);
+		boundingbox.push_back(minZ);
+
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(maxZ);
+		boundingbox.push_back(maxX);
+		boundingbox.push_back(maxY);
+		boundingbox.push_back(minZ);
+
 	}
 
 private:
@@ -96,11 +293,12 @@ private:
 	float ymax = std::numeric_limits<float>::min();
 	float zmin = std::numeric_limits<float>::max();
 	float zmax = std::numeric_limits<float>::min();
+
+
 	Mesh processMesh(aiMesh *mesh, const aiScene *scene)
 	{
 		// data to fill
-		vector<Vertex> vertices;
-		vector<unsigned int> indices;
+		
 		vector<Texture> textures;
 		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 		{
@@ -295,7 +493,6 @@ unsigned int TextureFromFile(const char *path, const string &directory, bool gam
 
 	return textureID;
 }*/
-
 
 
 #endif
