@@ -34,7 +34,8 @@ limitations under the License.
 #define BOUNDING_VERT "bounding.vert"
 #define BULLET_FRAG "bullet.frag"
 #define BULLET_VERT "bullet.vert"
-
+#define MODEL_FRAG "model.frag"
+#define MODEL_VERT "model.vert"
 
 //sound path
 #define SOUND_PATH "sound/gun_shot.mp3"
@@ -87,6 +88,9 @@ bool showBounding = false;
 
 glm::vec3 handPos;
 glm::vec3 shootDir;
+glm::vec3 lEyePos;
+glm::vec3 rEyePos;
+glm::vec3 headPos;
 
 glm::mat4 prevMt;
 glm::mat4 camMt;
@@ -707,15 +711,7 @@ protected:
 	  glm::vec4 forward = glm::inverse(rotMtx)*glm::vec4(0, 0, -1, 1);
 	  shootDir = glm::vec3(forward);
 	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
-	  if (RT) {
-		  frameCtr++;
-		  frameCtr = std::min(30, frameCtr++);
-
-	  }
-	  else if(LT){
-		  frameCtr--;
-		  frameCtr = std::max(0, frameCtr);
-	  }
+	 
 	   handPos = ctrBuf.at(frameCtr%30);
 
 
@@ -743,6 +739,9 @@ protected:
 		}
 		lastEye[eye] = renderEye[eye];
 
+		lEyePos = glm::vec3(ovr::toGlm(renderEye[ovrEye_Left])[3][0], ovr::toGlm(renderEye[ovrEye_Left])[3][1], ovr::toGlm(renderEye[ovrEye_Left])[3][2]);
+		rEyePos = glm::vec3(ovr::toGlm(renderEye[ovrEye_Right])[3][0], ovr::toGlm(renderEye[ovrEye_Right])[3][1], ovr::toGlm(renderEye[ovrEye_Right])[3][2]);
+		headPos = (lEyePos + rEyePos) / 2.0f;
 		/*if (getXState() == 0) {
 			const auto& vp = _sceneLayer.Viewport[eye];
 			glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
@@ -763,12 +762,14 @@ protected:
 			if (eye == ovrEye_Left) {
 				isLeft = true;
 				renderScene(_eyeProjections[ovrEye_Left], ovr::toGlm(renderEye[ovrEye_Left]), true);
+				
 			}
 			else {
 				isLeft = false;
 				renderScene(_eyeProjections[ovrEye_Right], ovr::toGlm(renderEye[ovrEye_Right]), false);
+				
 			}
-
+			
 	});
     glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
@@ -801,6 +802,15 @@ protected:
 // application would perform whatever rendering you want
 //
 
+struct Light {
+	glm::vec3 direction;
+	glm::vec3 color;
+	glm::vec3 ambient;
+	glm::vec3 diffuse;
+	glm::vec3 specular;
+};
+
+
 #include <vector>
 #include "shader.h"
 #include "Cube.h"
@@ -818,6 +828,7 @@ class Scene
   GLuint sphereShader;
   GLuint boundingShader;
   GLuint bulletShader;
+  GLuint modelShader;
 
   GLuint uProjection, uModelview, model;
 
@@ -829,6 +840,8 @@ class Scene
   Model* sphere;
   Model* bullet;
   BoundingBox* modelBounding,*bulletBounding;
+
+  Light light;
 
   
 
@@ -856,6 +869,7 @@ public:
 	sphereShader = LoadShaders(SPHERE_VERT, SPHERE_FRAG);
 	boundingShader = LoadShaders(BOUNDING_VERT, BOUNDING_FRAG);
 	bulletShader = LoadShaders(BULLET_VERT, BULLET_FRAG);
+	modelShader = LoadShaders(MODEL_VERT, MODEL_FRAG);
 	//models
     cube = std::make_unique<TexturedCube>("cube"); 
 	sphere = new Model("sphere.obj");
@@ -876,6 +890,11 @@ public:
 
 	//init sound
 	SoundEngine1 = irrklang::createIrrKlangDevice();
+	//init light
+	light.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
+	light.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
+	light.diffuse = glm::vec3(0.5f);
+	light.specular = glm::vec3(1.0f);
 	
   }
 
@@ -968,9 +987,37 @@ public:
 		  bullet->Draw(sphereShader);
 		  bullet->fire();
 	  }
-    
+      //set lighting and model shaders
+	  //for the model
+	  setUpLight();
+	  inverse = glm::translate(glm::mat4(1.0f), -headPos);
+	 
+	  T = glm::translate(glm::mat4(1.0f), headPos);
+	  //for gun picking if we are gonna implement that
+	  // T = glm::translate(glm::mat4(1.0f), glm::vec3(headPos.x+0.5f,headPos.y-2.0f,headPos.z));
+	  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+	  modelMatrix = T * scale*inverse;
+	  uProjection = glGetUniformLocation(modelShader, "projection");
+	  uModelview = glGetUniformLocation(modelShader, "view");
+	  model = glGetUniformLocation(modelShader, "model");
     
   }
+
+  void setUpLight() {
+	  glUseProgram(modelShader);
+	  glUniform3f(glGetUniformLocation(modelShader, "light.direction"),light.direction.x, light.direction.y, light.direction.z);
+	  glUniform3f(glGetUniformLocation(modelShader, "light.ambient"), light.ambient.x, light.ambient.y, light.ambient.z);
+	  glUniform3f(glGetUniformLocation(modelShader, "light.diffuse"), light.diffuse.x, light.diffuse.y, light.diffuse.z);
+	  glUniform3f(glGetUniformLocation(modelShader, "light.specular"), light.specular.x, light.specular.y, light.specular.z);
+	  glUniform3f(glGetUniformLocation(modelShader, "viewPos"), headPos.x,headPos.y,headPos.z);
+	  glUniform1i(glGetUniformLocation(modelShader, "material.diffuse"), 0);
+	  glUniform1i(glGetUniformLocation(modelShader, "material.specular"), 1);
+
+
+	  
+  }
+
+
   void checkcollision() {
 	  std::vector<float> bound1 = bulletBounding->getBoundary();
 	  //TODO
@@ -1028,7 +1075,7 @@ protected:
   void update() final override {
 
 	  //check collision
-	  scene->checkcollision();
+	 // scene->checkcollision();
 
 	  //handle button
 	  ovrInputState inputState;

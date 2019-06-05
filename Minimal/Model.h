@@ -450,7 +450,7 @@ private:
 					break;
 				}
 			}
-			/*if (!skip)
+			if (!skip)
 			{   // if texture hasn't been loaded already, load it
 				Texture texture;
 				texture.id = TextureFromFile(str.C_Str(), this->directory);
@@ -458,12 +458,12 @@ private:
 				texture.path = str.C_Str();
 				textures.push_back(texture);
 				tex.push_back(texture);  // store it as texture loaded for entire model, to ensure we won't unnecesery load duplicate textures.
-			}*/
+			}
 		}
 		return textures;
 	}
 };
-/*
+
 unsigned int TextureFromFile(const char *path, const string &directory, bool gamma)
 {
 	string filename = string(path);
@@ -502,7 +502,7 @@ unsigned int TextureFromFile(const char *path, const string &directory, bool gam
 	}
 
 	return textureID;
-}*/
+}
 
 
 #endif

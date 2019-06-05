@@ -145,6 +145,8 @@
     <None Include="bounding.vert" />
     <None Include="bullet.frag" />
     <None Include="bullet.vert" />
+    <None Include="model.frag" />
+    <None Include="model.vert" />
     <None Include="packages.config" />
     <None Include="shader.frag" />
     <None Include="shader.vert" />
