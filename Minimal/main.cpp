@@ -40,7 +40,7 @@ limitations under the License.
 //sound path
 #define SOUND_PATH "sound/gun_shot.mp3"
 #define SHELL_PATH "sound/shell_falls"
-#define BGM "sound/duel.mp3"
+#define BGM "sound/BGM.mp3"
 #define FIRING_BGM "sound/firing_music.mp3"
 
 ///////////////////////////////////////////////////////////////////////////////
