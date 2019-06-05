@@ -40,6 +40,8 @@ limitations under the License.
 //sound path
 #define SOUND_PATH "sound/gun_shot.mp3"
 #define SHELL_PATH "sound/shell_falls"
+#define BGM "sound/duel.mp3"
+#define FIRING_BGM "sound/firing_music.mp3"
 
 ///////////////////////////////////////////////////////////////////////////////
 //
@@ -80,6 +82,7 @@ int last;
 bool isLeft = false;
 bool fire = false;
 bool finishFire;
+bool soundPlayed;
 int frameCtr=0;
 int frameHead = 0;
 bool render = true;
@@ -102,6 +105,7 @@ boost::circular_buffer<glm::mat4> ringBuf(30);
 boost::circular_buffer<glm::vec3> ctrBuf(30);
 // Sound System
 irrklang::ISoundEngine * SoundEngine1;
+irrklang::ISoundEngine * SoundEngine2;
 
 
 bool RT;
@@ -890,11 +894,15 @@ public:
 
 	//init sound
 	SoundEngine1 = irrklang::createIrrKlangDevice();
+	SoundEngine2 = irrklang::createIrrKlangDevice();
 	//init light
 	light.direction = glm::vec3(-0.2f, -1.0f, -0.3f);
 	light.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
 	light.diffuse = glm::vec3(0.5f);
 	light.specular = glm::vec3(1.0f);
+
+	SoundEngine2->setSoundVolume = 0.3f;
+	SoundEngine2->play2D(BGM, GL_TRUE);
 	
   }
 
@@ -902,6 +910,7 @@ public:
 	  delete(sphere);
 	  delete(bulletBounding);
 	  delete(SoundEngine1);
+	  delete(SoundEngine2);
 	  glDeleteProgram(shaderID);
 	  glDeleteProgram(sphereShader);
 	  glDeleteProgram(boundingShader);
@@ -937,6 +946,7 @@ public:
 		  glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
+		 
 	  }
 	  else if (fire) {
 		  bullet = new Model("sphere.obj");
@@ -949,10 +959,17 @@ public:
 		  }
 		  bullet->viewdir = shootDir;
 		  bullet->fire();
+		  SoundEngine1->setSoundVolume = 0.5f;
 		  SoundEngine1->play2D(SOUND_PATH, GL_TRUE);
 		  SoundEngine1->play2D(SHELL_PATH, GL_TRUE);
-		  SoundEngine1->stopAllSounds();
+		  if (!soundPlayed) {
+			  SoundEngine2->setSoundVolume = 0.3f;
+			  SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
+		  }
+		  //SoundEngine1->stopAllSounds();
 	  }
+
+	 
 	  if (bullet->duration == 0) {
 		  finishFire = true;
 	  }
