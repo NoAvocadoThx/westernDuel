@@ -947,11 +947,13 @@ public:
 		  cout << rotationMtx[0][2] << endl;
 	  }
 
+
+	  //set bullet position when not firing
 	  glUseProgram(bulletShader);
 	  if (!fire) {
 		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		  T = glm::translate(glm::mat4(1.0f), handPos);
-		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f));
+		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
 		  modelMatrix = T * rotationMtx*scale*inverse*bullet->toWorld;
 		  
 		  uProjection = glGetUniformLocation(bulletShader, "projection");
@@ -961,15 +963,16 @@ public:
 		  glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
-		  bullet->Draw(bulletShader);
+		  //bullet->Draw(bulletShader);
 		 
 		
 	  }
+	  //if firing
 	  else if (fire) {
 		
 		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		  T = glm::translate(glm::mat4(1.0f), handPos);
-		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f));
+		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.08f, 0.08f, 0.08f));
 		  modelMatrix = T * rotationMtx*scale*inverse*bullet->toWorld;
 		  uProjection = glGetUniformLocation(bulletShader, "projection");
 		  uModelview = glGetUniformLocation(bulletShader, "view");
