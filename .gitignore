@@ -59,6 +59,7 @@ artifacts/
 *.meta
 *.obj
 !sphere.obj
+!model*/*
 *.pch
 *.pdb
 *.pgc

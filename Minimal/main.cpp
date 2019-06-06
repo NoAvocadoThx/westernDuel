@@ -39,7 +39,7 @@ limitations under the License.
 
 //sound path
 #define SOUND_PATH "sound/gun_shot.mp3"
-#define SHELL_PATH "sound/shell_falls"
+#define SHELL_PATH "sound/shell_falls.mp3"
 #define BGM "sound/BGM.mp3"
 #define FIRING_BGM "sound/firing_music.mp3"
 
@@ -82,6 +82,7 @@ int last;
 bool isLeft = false;
 bool fire = false;
 bool finishFire;
+bool fired;
 bool soundPlayed;
 int frameCtr=0;
 int frameHead = 0;
@@ -95,6 +96,7 @@ glm::vec3 lEyePos;
 glm::vec3 rEyePos;
 glm::vec3 headPos;
 
+glm::mat4 rotationMtx=mat4(1.0);
 glm::mat4 prevMt;
 glm::mat4 camMt;
 glm::mat4 ctrMt;
@@ -535,6 +537,7 @@ public:
   }
 };
 
+#include <glm/gtx/string_cast.hpp>
 class RiftApp : public GlfwApp, public RiftManagerApp
 {
 public:
@@ -675,7 +678,6 @@ protected:
   }
 
 
-
   void draw() final override
   {
 
@@ -710,14 +712,15 @@ protected:
 	  handPosition[1] = handPoses[1].Position;
 
 	  //get shooting direction
-	  glm::quat orientation=ovr::toGlm(handPoses[0].Orientation);
+	  glm::quat orientation=ovr::toGlm(handPoses[1].Orientation);
 	  glm::mat4 rotMtx = glm::mat4_cast(orientation);
 	  glm::vec4 forward = glm::inverse(rotMtx)*glm::vec4(0, 0, -1, 1);
 	  shootDir = glm::vec3(forward);
 	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
 	 
-	   handPos = ctrBuf.at(frameCtr%30);
-
+	  handPos = ovr::toGlm(handPosition[ovrHand_Right]);
+	  rotationMtx = rotMtx;
+	 // std::cout << glm::to_string(rotationMtx) << std::endl;
 
 
     ovrPosef eyePoses[2];
@@ -841,7 +844,7 @@ class Scene
   std::unique_ptr<Skybox> skybox_r;
   std::unique_ptr<Skybox> skybox;
 
-  Model* sphere;
+  Model* gun;
   Model* bullet;
   BoundingBox* modelBounding,*bulletBounding;
 
@@ -876,7 +879,7 @@ public:
 	modelShader = LoadShaders(MODEL_VERT, MODEL_FRAG);
 	//models
     cube = std::make_unique<TexturedCube>("cube"); 
-	sphere = new Model("sphere.obj");
+	gun = new Model("model/gun/schofield-pistol-low.obj");
 	bullet = new Model("sphere.obj");
 	bullet->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
 	  // 10m wide sky box: size doesn't matter though
@@ -887,8 +890,9 @@ public:
 	skybox = std::make_unique<Skybox>("skybox");
 	skybox->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
 	//initialize bounding boxes
+	bullet = new Model("sphere.obj");
 	bulletBounding = new BoundingBox(bullet->boundingbox, bullet->boxVertices);
-	bulletBounding->toWorld = bullet->toWorld;
+	
 	//TODO
 	//temp model bouding box
 
@@ -901,13 +905,13 @@ public:
 	light.diffuse = glm::vec3(0.5f);
 	light.specular = glm::vec3(1.0f);
 
-	SoundEngine2->setSoundVolume = 0.3f;
+	SoundEngine2->setSoundVolume ( 0.2);
 	SoundEngine2->play2D(BGM, GL_TRUE);
 	
   }
 
   ~Scene() {
-	  delete(sphere);
+	  delete(gun);
 	  delete(bulletBounding);
 	  delete(SoundEngine1);
 	  delete(SoundEngine2);
@@ -921,24 +925,35 @@ public:
   {
 	  glm::mat4 inverse = glm::translate(glm::mat4(1.0f), -handPos);
 	  glm::mat4 T = glm::translate(glm::mat4(1.0f), handPos);
-	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.14f, 0.14f, 0.14f));
-	  glm::mat4 modelMatrix = T * scale*inverse;
-	  glUseProgram(sphereShader);
-	  uProjection = glGetUniformLocation(sphereShader, "projection");
-	  uModelview = glGetUniformLocation(sphereShader, "view");
-	  model = glGetUniformLocation(sphereShader, "model");
+	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
+	  glm::mat4 modelMatrix = T * rotationMtx*scale*inverse;
+	  modelMatrix = modelMatrix * glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
+	  //glm::rotate(modelMatrix,0.5, glm::vec3(0, 1, 0));
+	 // modelMatrix
+	  
+	  glUseProgram(modelShader);
+	  setUpLight();
+	  uProjection = glGetUniformLocation(modelShader, "projection");
+	  uModelview = glGetUniformLocation(modelShader, "view");
+	  model = glGetUniformLocation(modelShader, "model");
 	  // Now send these values to the shader program
 	  glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 	  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 	  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
-	  sphere->Draw(sphereShader);
-	 
+	  gun->Draw(modelShader);
+	  if (RT) {
+		  cout << rotationMtx[0][0] << endl;
+		  cout << rotationMtx[0][1] << endl;
+		  cout << rotationMtx[0][2] << endl;
+	  }
+
+	  glUseProgram(bulletShader);
 	  if (!fire) {
 		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		  T = glm::translate(glm::mat4(1.0f), handPos);
-		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
-		  modelMatrix = T * scale*inverse;
-		  glUseProgram(bulletShader);
+		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f));
+		  modelMatrix = T * rotationMtx*scale*inverse*bullet->toWorld;
+		  
 		  uProjection = glGetUniformLocation(bulletShader, "projection");
 		  uModelview = glGetUniformLocation(bulletShader, "view");
 		  model = glGetUniformLocation(bulletShader, "model");
@@ -946,38 +961,83 @@ public:
 		  glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
+		  bullet->Draw(bulletShader);
 		 
+		
 	  }
 	  else if (fire) {
-		  bullet = new Model("sphere.obj");
-
-
+		
+		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
+		  T = glm::translate(glm::mat4(1.0f), handPos);
+		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.2f, 0.2f, 0.2f));
+		  modelMatrix = T * rotationMtx*scale*inverse*bullet->toWorld;
+		  uProjection = glGetUniformLocation(bulletShader, "projection");
+		  uModelview = glGetUniformLocation(bulletShader, "view");
+		  model = glGetUniformLocation(bulletShader, "model");
+		  // Now send these values to the shader program
+		  glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
+		  if (!bullet->isFired) {
+			  bullet->viewdir = shootDir;
+		  }
+		  bullet->duration = 250;
+		  bullet->Draw(bulletShader);
+		  cout << glm::to_string(bullet->toWorld )<< endl;
 		  //bullet->toWorld = gun->toworld;
 		  if (bullet->duration != 0) {
 			  bullet->Draw(bulletShader);
 			  finishFire = false;
 		  }
-		  bullet->viewdir = shootDir;
+		 
+		  
 		  bullet->fire();
-		  SoundEngine1->setSoundVolume = 0.5f;
-		  SoundEngine1->play2D(SOUND_PATH, GL_TRUE);
-		  SoundEngine1->play2D(SHELL_PATH, GL_TRUE);
+		  bulletBounding->toWorld = bullet->toWorld;
 		  if (!soundPlayed) {
-			  SoundEngine2->setSoundVolume = 0.3f;
-			  SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
+			  SoundEngine2->setSoundVolume( 0.2);
+			  //SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
 		  }
-		  //SoundEngine1->stopAllSounds();
+		  SoundEngine1->stopAllSounds();
+		  fired = true;
 	  }
+	  if (finishFire) {
+		  bullet = new Model("sphere.obj");
+		  fired = false;
+		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
+		  T = glm::translate(glm::mat4(1.0f), handPos);
+		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
+		  modelMatrix = T * scale*inverse*bullet->toWorld;
 
-	 
+		  uProjection = glGetUniformLocation(bulletShader, "projection");
+		  uModelview = glGetUniformLocation(bulletShader, "view");
+		  model = glGetUniformLocation(bulletShader, "model");
+		  // Now send these values to the shader program
+		  glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
+		  //bullet->toWorld = gun->toworld;
+		  bullet->Draw(sphereShader);
+
+	  }
+	  if (RT) {
+		 
+			  SoundEngine1->setSoundVolume(0.3);
+			  // SoundEngine1->s
+			 // SoundEngine1->play2D(SOUND_PATH, GL_TRUE);
+			  //SoundEngine1->play2D(SHELL_PATH, GL_TRUE);
+			  // SoundEngine1->stopAllSounds();
+		  
+		  
+	  }
+	
 	  if (bullet->duration == 0) {
 		  finishFire = true;
 	  }
-	  if (finishFire) {
-		  bullet->duration = 150;
-		
+	  if (fired) {
+		  
+		  
 	  }
-	
+	  
 	 
 	  //show bouding boxes
 	  if (showBounding) {
@@ -994,16 +1054,10 @@ public:
 	  else {
 		skybox_r->draw(shaderID, projection, view);
 	  }
-	  cube->toWorld = instance_positions[0] * glm::scale(glm::mat4(1.0f), glm::vec3(scalor));
+	  cube->toWorld = camMt * glm::scale(glm::mat4(1.0f), glm::vec3(scalor));
 	  cube->draw(shaderID, projection, view);
 		
-	  if (fire) {
-		  bullet = new Model("sphere.obj");
-		  
-		  //bullet->toWorld = gun->toworld;
-		  bullet->Draw(sphereShader);
-		  bullet->fire();
-	  }
+	
       //set lighting and model shaders
 	  //for the model
 	  setUpLight();
@@ -1090,7 +1144,7 @@ protected:
     scene.reset();
   }
   void update() final override {
-
+	  //TODO
 	  //check collision
 	 // scene->checkcollision();
 
@@ -1129,38 +1183,37 @@ protected:
 			  fire = true;
 			  RT = true;
 		  }
+		 
 		  else if(scene->RTPressed){
-			  frameLag++;
-			  frameLag = std::min(30, frameLag++);
-			  fire = false;
-			  scene->RTPressed = false;
 			  RT = false;
+		
+
+			 
+			  scene->RTPressed = false;
+			  //RT = false;
+		  
 		  }
+		 
 		  if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) {
 			  scene->LTPressed = true;
-			  RT = true;
+			  
 		  }
 		  else if (scene->LTPressed) {
-			  frameLag--;
-			  frameLag = std::max(0, frameLag--);
-			  ringBuf.pop_back();
-			  std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
+		
 			  scene->LTPressed = false;
-			  RT = false;
+			  
 		  }
 
 		  //hand
 		  if (inputState.HandTrigger[ovrHand_Right] > 0.5f) scene->RHPressed = true;
 		  else if (scene->RHPressed) {
-			  renderLag++;
-			  renderLag = std::min(10, renderLag++);
-			  std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
+			
+			  
 			  scene->RHPressed = false;
 		  }
 		  if (inputState.HandTrigger[ovrHand_Left] > 0.5f) scene->LHPressed = true;
 		  else if (scene->LHPressed) {
-			  renderLag--;
-			  renderLag = std::max(0, renderLag--);
+			  
 			  
 			  std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
 			  scene->LHPressed = false;
