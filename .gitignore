@@ -60,6 +60,8 @@ artifacts/
 *.obj
 !sphere.obj
 !model*/*
+!schofield-pistol-low-high.obj
+!gun.obj
 *.pch
 *.pdb
 *.pgc
