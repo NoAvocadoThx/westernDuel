@@ -61,7 +61,7 @@ artifacts/
 !sphere.obj
 !model/
 !model/*.obj
-!schofield-pistol-low-high.obj
+!model/schofield-pistol-low-high.obj
 !gun.obj
 *.pch
 *.pdb
