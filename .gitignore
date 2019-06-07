@@ -59,7 +59,8 @@ artifacts/
 *.meta
 *.obj
 !sphere.obj
-!model*/*
+!model/
+!model/*.obj
 !schofield-pistol-low-high.obj
 !gun.obj
 *.pch
