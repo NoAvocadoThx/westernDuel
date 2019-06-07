@@ -96,7 +96,7 @@ glm::vec3 lEyePos;
 glm::vec3 rEyePos;
 glm::vec3 headPos;
 
-glm::mat4 rotationMtx=mat4(1.0);
+glm::mat4 handRotationMtx=mat4(1.0);
 glm::mat4 prevMt;
 glm::mat4 camMt;
 glm::mat4 ctrMt;
@@ -719,7 +719,7 @@ protected:
 	  ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
 	 
 	  handPos = ovr::toGlm(handPosition[ovrHand_Right]);
-	  rotationMtx = rotMtx;
+	  handRotationMtx = rotMtx;
 	 // std::cout << glm::to_string(rotationMtx) << std::endl;
 
 
@@ -926,7 +926,7 @@ public:
 	  glm::mat4 inverse = glm::translate(glm::mat4(1.0f), -handPos);
 	  glm::mat4 T = glm::translate(glm::mat4(1.0f), handPos);
 	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
-	  glm::mat4 modelMatrix = T * rotationMtx*scale*inverse;
+	  glm::mat4 modelMatrix = T * handRotationMtx*scale*inverse;
 	  modelMatrix = modelMatrix * glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
 	  //glm::rotate(modelMatrix,0.5, glm::vec3(0, 1, 0));
 	 // modelMatrix
@@ -942,9 +942,9 @@ public:
 	  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 	  gun->Draw(modelShader);
 	  if (RT) {
-		  cout << rotationMtx[0][0] << endl;
-		  cout << rotationMtx[0][1] << endl;
-		  cout << rotationMtx[0][2] << endl;
+		  cout << handRotationMtx[0][0] << endl;
+		  cout << handRotationMtx[0][1] << endl;
+		  cout << handRotationMtx[0][2] << endl;
 	  }
 
 
@@ -954,7 +954,7 @@ public:
 		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		  T = glm::translate(glm::mat4(1.0f), handPos);
 		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
-		  modelMatrix = T * rotationMtx*scale*inverse*bullet->toWorld;
+		  modelMatrix = T * handRotationMtx*scale*inverse*bullet->toWorld;
 		  
 		  uProjection = glGetUniformLocation(bulletShader, "projection");
 		  uModelview = glGetUniformLocation(bulletShader, "view");
@@ -969,11 +969,11 @@ public:
 	  }
 	  //if firing
 	  else if (fire) {
-		
+		  
 		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		  T = glm::translate(glm::mat4(1.0f), handPos);
 		  scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.08f, 0.08f, 0.08f));
-		  modelMatrix = T * rotationMtx*scale*inverse*bullet->toWorld;
+		  modelMatrix = T * handRotationMtx*scale*inverse*bullet->toWorld;
 		  uProjection = glGetUniformLocation(bulletShader, "projection");
 		  uModelview = glGetUniformLocation(bulletShader, "view");
 		  model = glGetUniformLocation(bulletShader, "model");

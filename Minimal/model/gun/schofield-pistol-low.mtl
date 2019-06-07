@@ -12,5 +12,5 @@ newmtl Material__384
 	Kd 0.5880 0.5880 0.5880
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka C:\Users\ADEL\Desktop\schofield-mod\texture.jpg
-	map_Kd C:\Users\ADEL\Desktop\schofield-mod\texture.jpg
+	map_Ka texture.jpg
+	map_Kd texture.jpg
