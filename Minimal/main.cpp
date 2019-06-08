@@ -931,6 +931,7 @@ public:
 	  //glm::rotate(modelMatrix,0.5, glm::vec3(0, 1, 0));
 	 // modelMatrix
 	  
+	  //draw gun 
 	  glUseProgram(modelShader);
 	  setUpLight();
 	  uProjection = glGetUniformLocation(modelShader, "projection");
@@ -941,11 +942,7 @@ public:
 	  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 	  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 	  gun->Draw(modelShader);
-	  if (RT) {
-		  cout << handRotationMtx[0][0] << endl;
-		  cout << handRotationMtx[0][1] << endl;
-		  cout << handRotationMtx[0][2] << endl;
-	  }
+	
 
 
 	  //set bullet position when not firing
@@ -964,7 +961,7 @@ public:
 		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 		  //bullet->Draw(bulletShader);
-		 
+		  bullet->viewdir = shootDir;
 		
 	  }
 	  //if firing
@@ -982,7 +979,7 @@ public:
 		  glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 		  glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 		  if (!bullet->isFired) {
-			  bullet->viewdir = shootDir;
+			 // bullet->viewdir = shootDir;
 		  }
 		  bullet->duration = 250;
 		  bullet->Draw(bulletShader);
@@ -995,7 +992,7 @@ public:
 		 
 		  
 		  bullet->fire();
-		  bulletBounding->toWorld = bullet->toWorld;
+		  bulletBounding->toWorld = modelMatrix;
 		  if (!soundPlayed) {
 			  SoundEngine2->setSoundVolume( 0.2);
 			  //SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
