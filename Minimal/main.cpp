@@ -990,6 +990,27 @@ public:
 		glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 		glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 		gun->Draw(modelShader);
+		
+		
+
+		//draw other gun
+		glm::mat4 o_inverse = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
+		glm::mat4 o_T = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
+		glm::mat4 o_scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
+		glm::mat4 o_modelMatrix = o_T * glm::mat4_cast(otherPlayer.handrotation)*o_scale*o_inverse;
+		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 50));
+		//draw gun 
+		glUseProgram(modelShader);
+		setUpLight();
+		uProjection = glGetUniformLocation(modelShader, "projection");
+		uModelview = glGetUniformLocation(modelShader, "view");
+		model = glGetUniformLocation(modelShader, "model");
+		// Now send these values to the shader program
+		glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+		glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+		glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix[0][0]);
+
+		othergun->Draw(modelShader);
 
 
 
