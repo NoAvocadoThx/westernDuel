@@ -21,7 +21,8 @@ limitations under the License.
 #include <memory>
 #include <exception>
 #include <algorithm>
-
+#include <chrono>
+#include <random>
 #include <Windows.h>
 
 #define __STDC_FORMAT_MACROS 1
@@ -86,6 +87,7 @@ bool fired;
 bool soundPlayed;
 int frameCtr=0;
 int frameHead = 0;
+int bulletCount = 0;
 bool render = true;
 bool superRot = false;
 bool showBounding = false;
@@ -821,7 +823,8 @@ struct Light {
 #include <vector>
 #include "shader.h"
 #include "Cube.h"
-
+#include <stdlib.h>
+#include <time.h> 
 // a class for building and rendering cubes
 class Scene
 {
@@ -846,11 +849,13 @@ class Scene
 
   Model* gun;
   Model* bullet;
+  std::vector<Model*> bullets;
   BoundingBox* modelBounding,*bulletBounding;
 
   Light light;
 
-  
+  bool gameStart;
+  chrono::time_point<chrono::system_clock> startTime;
 
   const unsigned int GRID_SIZE{5};
 
@@ -880,6 +885,9 @@ public:
 	//models
     cube = std::make_unique<TexturedCube>("cube"); 
 	gun = new Model("model/gun/schofield-pistol-low.obj");
+	/*for (int i = 0; i < 6; i++) {
+		bullets[i] = new Model("sphere.obj");
+	}*/
 	bullet = new Model("sphere.obj");
 	bullet->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
 	  // 10m wide sky box: size doesn't matter though
@@ -907,7 +915,10 @@ public:
 
 	SoundEngine2->setSoundVolume ( 0.2);
 	SoundEngine2->play2D(BGM, GL_TRUE);
+	//set timer
+	startTime = chrono::system_clock::now();
 	
+
   }
 
   ~Scene() {
@@ -923,6 +934,7 @@ public:
 
   void render(const glm::mat4& projection, const glm::mat4& view,bool left)
   {
+	  startGame();
 	  glm::mat4 inverse = glm::translate(glm::mat4(1.0f), -handPos);
 	  glm::mat4 T = glm::translate(glm::mat4(1.0f), handPos);
 	  glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
@@ -965,7 +977,7 @@ public:
 		
 	  }
 	  //if firing
-	  else if (fire) {
+	  else if (fire&&gameStart) {
 		  
 		  inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		  T = glm::translate(glm::mat4(1.0f), handPos);
@@ -1088,6 +1100,16 @@ public:
 	  
   }
 
+  void startGame() {
+	  int max = 11;
+	  int min = 5;
+	  auto endTime = chrono::system_clock::now();
+	  srand(time(NULL));
+	  int randNum = rand() % (max - min + 1) + min;
+	  if (chrono::duration_cast<chrono::seconds>(endTime - startTime).count() == randNum) {
+		  gameStart = true;
+	  }
+  }
 
   void checkcollision() {
 	  std::vector<float> bound1 = bulletBounding->getBoundary();
@@ -1185,6 +1207,7 @@ protected:
 		  }
 		 
 		  else if(scene->RTPressed){
+			  bulletCount = (bulletCount + 1) % 6;
 			  RT = false;
 		
 
