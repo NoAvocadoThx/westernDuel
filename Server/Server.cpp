@@ -31,24 +31,30 @@ void UpdateLoop() {
 	}
 }
 
+Player first;
+Player second;
+
+void foo(int id, Player& p) {
+	if (id == 1)
+		first = p;
+	else
+		second = p;
+}
+
 int main()
 {
 	// Set up rpc server and listen to PORT
 	rpc::server srv(PORT);
 	std::cout << "Listening to port: " << PORT << std::endl;
 
+
 	// Define a rpc function: auto echo(string const& s, Player& p){} (return type is deduced)
-	srv.bind("echo"/*function name*/, [/*put = here if you want to capture environment by value, & by reference*/]
-	(string const& s, Player& p) /*function parameters*/
-	{
-		std::cout << "Get message: " << s << std::endl;
-		std::cout << "Before: " << p.to_string() << std::endl;
-		p.hp -= 1;
-		p.pos.y += 1;
-		p.rotation = glm::rotate(p.rotation, glm::radians(90.0f), glm::vec3(0, 1, 0));
-		std::cout << "After: " << p.to_string() << std::endl;
-		// return value : that will be returned back to client side
-		return std::make_tuple(string("> ") + s, p);
+	srv.bind("in", &foo);
+	srv.bind("out", [](int id) {
+		if (id == 1)
+			return first;
+		else
+			return second;
 	});
 
 	// Blocking call to start the server: non-blocking call is srv.async_run(threadsCount);
