@@ -16,7 +16,7 @@
 !ikpFlac.dll
 !ikpMP3.dll
 !irrKlang.dll
-
+!rpc/*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
