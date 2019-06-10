@@ -736,9 +736,9 @@ protected:
 		glm::quat orientation = ovr::toGlm(handPoses[1].Orientation);
 		glm::mat4 rotMtx = glm::mat4_cast(orientation);
 		glm::vec4 forward = glm::inverse(rotMtx)*glm::vec4(0, 0, -1, 1);
-		shootDir = glm::vec3(forward);
-		ctrBuf.push_back(ovr::toGlm(handPosition[ovrHand_Right]));
-
+		glm::vec3 shootDir_temp = glm::vec3(forward);
+		ctrBuf.push_back(shootDir_temp);
+		shootDir = ctrBuf.at(10%30);
 		handPos = ovr::toGlm(handPosition[ovrHand_Right]);
 		handRotationMtx = rotMtx;
 		// std::cout << glm::to_string(rotationMtx) << std::endl;
