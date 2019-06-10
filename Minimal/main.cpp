@@ -737,10 +737,11 @@ protected:
 		glm::mat4 rotMtx = glm::mat4_cast(orientation);
 		glm::vec4 forward = glm::inverse(rotMtx)*glm::vec4(0, 0, -1, 1);
 		glm::vec3 shootDir_temp = glm::vec3(forward);
-		ctrBuf.push_back(shootDir_temp);
-		shootDir = ctrBuf.at(10%30);
+		//ctrBuf.push_back(shootDir_temp);
+		//shootDir = ctrBuf.at(10%30);
 		handPos = ovr::toGlm(handPosition[ovrHand_Right]);
 		handRotationMtx = rotMtx;
+		shootDir = forward;
 		// std::cout << glm::to_string(rotationMtx) << std::endl;
 
 
@@ -890,6 +891,7 @@ class Scene
 	Light light;
 
 	bool gameStart;
+	bool shotPlayed;
 	chrono::time_point<chrono::system_clock> startTime;
 
 	const unsigned int GRID_SIZE{ 5 };
@@ -950,7 +952,7 @@ public:
 		light.specular = glm::vec3(1.0f);
 
 		SoundEngine2->setSoundVolume(0.2);
-		SoundEngine2->play2D(BGM, GL_TRUE);
+		SoundEngine2->play2D(BGM, GL_FALSE);
 		//set timer
 		startTime = chrono::system_clock::now();
 
@@ -970,7 +972,8 @@ public:
 
 	void render(const glm::mat4& projection, const glm::mat4& view, bool left)
 	{
-		startGame();
+		//startGame();
+		gameStart = true;
 		glm::mat4 inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		glm::mat4 T = glm::translate(glm::mat4(1.0f), handPos);
 		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
@@ -1031,6 +1034,7 @@ public:
 			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 			//bullet->Draw(bulletShader);
 			bullet->viewdir = shootDir;
+			//bullet->toWorld = modelMatrix;
 
 		}
 		//if firing
@@ -1052,7 +1056,7 @@ public:
 			}
 			bullet->duration = 250;
 			bullet->Draw(bulletShader);
-			cout << glm::to_string(bullet->toWorld) << endl;
+			//cout << glm::to_string(bullet->toWorld) << endl;
 			//bullet->toWorld = gun->toworld;
 			if (bullet->duration != 0) {
 				bullet->Draw(bulletShader);
@@ -1064,13 +1068,16 @@ public:
 			bulletBounding->toWorld = modelMatrix;
 			if (!soundPlayed) {
 				SoundEngine2->setSoundVolume(0.2);
-				//SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
+				SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
+				soundPlayed = true;
 			}
-			SoundEngine1->stopAllSounds();
+			//SoundEngine1->stopAllSounds();
 			fired = true;
+			
 		}
 		if (finishFire) {
 			bullet = new Model("sphere.obj");
+			bullet->toWorld = modelMatrix;
 			fired = false;
 			inverse = glm::translate(glm::mat4(1.0f), -handPos);
 			T = glm::translate(glm::mat4(1.0f), handPos);
@@ -1086,26 +1093,31 @@ public:
 			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
 			//bullet->toWorld = gun->toworld;
 			bullet->Draw(sphereShader);
+			
 
 		}
+		
 		if (RT) {
 
 			SoundEngine1->setSoundVolume(0.3);
-			// SoundEngine1->s
-		   // SoundEngine1->play2D(SOUND_PATH, GL_TRUE);
+
+			
+				SoundEngine1->play2D(SOUND_PATH, GL_FALSE);
+			
+
+
 			//SoundEngine1->play2D(SHELL_PATH, GL_TRUE);
+			
+			//RT = false;
+
 			// SoundEngine1->stopAllSounds();
 
 
 		}
-
 		if (bullet->duration == 0) {
 			finishFire = true;
 		}
-		if (fired) {
-
-
-		}
+	
 
 
 		//show bouding boxes
@@ -1260,19 +1272,22 @@ protected:
 			if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
 				scene->RTPressed = true;
 				fire = true;
-				RT = true;
+				
 			}
 
 			else if (scene->RTPressed) {
 				bulletCount = (bulletCount + 1) % 6;
-				RT = false;
 
-
+			
+				
+				RT = true;
 
 				scene->RTPressed = false;
 				//RT = false;
 
 			}
+			else { RT = false; }
+			
 
 			if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) {
 				scene->LTPressed = true;
@@ -1398,7 +1413,7 @@ protected:
 int main(int argc, char** argv)
 {
 
-	rpc::client c("localhost", 8080);
+	rpc::client c("localhost", 8050);
 	std::cout << "Connected" << std::endl;
 
 	int result = -1;

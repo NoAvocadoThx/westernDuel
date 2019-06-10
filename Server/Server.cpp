@@ -14,7 +14,7 @@
 
 using std::string;
 
-#define PORT 8080
+#define PORT 8050
 
 void StartServer() {
 	rpc::server srv(PORT);
