@@ -1041,7 +1041,7 @@ public:
 		//for gun picking if we are gonna implement that
 		glm::mat4 o_T_model = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z + 1.5f));
 		glm::mat4 o_T_head = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z));
-		glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f));
+		glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 		glm::mat4 o_modelMatrix_model = o_T_model * o_scale_model*o_inverse_model;
 		glm::mat4 o_bounding_model = o_T_head *o_scale_model*o_inverse_model;
 		
@@ -1150,6 +1150,7 @@ public:
 			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix_gun[0][0]);
 			gun->Draw(modelShader);
+			otherPlayer.pickedUp = true;
 		}
 
 
@@ -1275,6 +1276,7 @@ public:
 			glm::mat4 o_T_b = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
 			glm::mat4 o_scale_b = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 			glm::mat4 o_modelMatrix_b = o_T_b *o_scale_b*o_inverse_b*otherbullet->toWorld;
+			o_modelMatrix_b*=  glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10.0f));
 			//curPlayerBullet = o_modelMatrix_b;
 			uProjection = glGetUniformLocation(bulletShader, "projection");
 			uModelview = glGetUniformLocation(bulletShader, "view");
@@ -1299,6 +1301,7 @@ public:
 			glm::mat4 o_T_bs = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
 			glm::mat4 o_scale_bs = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 			glm::mat4 o_modelMatrix_bs = o_T_bs * o_scale_bs*o_inverse_bs*otherbullet->toWorld;
+			o_modelMatrix_bs *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10.0f));
 			otherPlayerBullet = o_modelMatrix_bs;
 			uProjection = glGetUniformLocation(bulletShader, "projection");
 			uModelview = glGetUniformLocation(bulletShader, "view");
@@ -1334,6 +1337,7 @@ public:
 			glm::mat4 o_T_finish = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
 			glm::mat4 o_scale_finish = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 			glm::mat4 o_modelMatrix_finish = o_T_finish *o_scale_finish*o_inverse_finish;
+			o_modelMatrix_finish *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10.0f));
 			otherPlayerBullet = o_modelMatrix_finish;
 			uProjection = glGetUniformLocation(bulletShader, "projection");
 			uModelview = glGetUniformLocation(bulletShader, "view");
@@ -1375,10 +1379,10 @@ public:
 
 		if (left) {
 			// Render Skybox : remove view translation
-			skybox_l->draw(shaderID, projection, view);
+		//	skybox_l->draw(shaderID, projection, view);
 		}
 		else {
-			skybox_r->draw(shaderID, projection, view);
+			//skybox_r->draw(shaderID, projection, view);
 		}
 		//cube->toWorld = camMt * glm::scale(glm::mat4(1.0f), glm::vec3(scalor));
 		//cube->draw(shaderID, projection, view);
