@@ -110,6 +110,7 @@ glm::vec3 rEyePos;
 glm::vec3 headPos;
 
 glm::mat4 handRotationMtx = mat4(1.0);
+glm::mat4 headRotationMtx = mat4(1.0f);
 glm::mat4 prevMt;
 glm::mat4 camMt;
 glm::mat4 ctrMt;
@@ -735,10 +736,10 @@ protected:
 		//get shooting direction
 		glm::quat orientation = ovr::toGlm(handPoses[1].Orientation);
 		glm::mat4 rotMtx = glm::mat4_cast(orientation);
-		glm::vec4 forward = glm::inverse(rotMtx)*glm::vec4(0, 0, -1, 1);
+		glm::vec4 forward = rotMtx*glm::vec4(0, 0, -1, 1);
 		glm::vec3 shootDir_temp = glm::vec3(forward);
-		//ctrBuf.push_back(shootDir_temp);
-		//shootDir = ctrBuf.at(10%30);
+		ctrBuf.push_back(shootDir_temp);
+		shootDir = ctrBuf.at(0);
 		handPos = ovr::toGlm(handPosition[ovrHand_Right]);
 		handRotationMtx = rotMtx;
 		shootDir = forward;
@@ -747,6 +748,15 @@ protected:
 
 		ovrPosef eyePoses[2];
 		ovr_GetEyePoses(_session, frame, true, _viewScaleDesc.HmdToEyePose, eyePoses, &_sceneLayer.SensorSampleTime);
+		ovrVector3f headPosition[2];
+		headPosition[0] = eyePoses[0].Position;
+		headPosition[1] = eyePoses[1].Position;
+		glm::vec3 leftEyePos = ovr::toGlm(headPosition[0]);
+		glm::vec3 rightEyePos = ovr::toGlm(headPosition[1]);
+		headPos = (leftEyePos + rightEyePos) / 2.0f;
+		glm::quat headOri = ovr::toGlm(eyePoses[1].Orientation);
+		glm::mat4 headRot = glm::mat4_cast(headOri);
+		headRotationMtx = headRot;
 
 		int curIndex;
 		ovr_GetTextureSwapChainCurrentIndex(_session, _eyeTexture, &curIndex);
@@ -768,9 +778,8 @@ protected:
 			}
 			lastEye[eye] = renderEye[eye];
 
-			lEyePos = glm::vec3(ovr::toGlm(renderEye[ovrEye_Left])[3][0], ovr::toGlm(renderEye[ovrEye_Left])[3][1], ovr::toGlm(renderEye[ovrEye_Left])[3][2]);
-			rEyePos = glm::vec3(ovr::toGlm(renderEye[ovrEye_Right])[3][0], ovr::toGlm(renderEye[ovrEye_Right])[3][1], ovr::toGlm(renderEye[ovrEye_Right])[3][2]);
-			headPos = (lEyePos + rEyePos) / 2.0f;
+			
+
 			/*if (getXState() == 0) {
 				const auto& vp = _sceneLayer.Viewport[eye];
 				glViewport(vp.Pos.x, vp.Pos.y, vp.Size.w, vp.Size.h);
@@ -886,6 +895,8 @@ class Scene
 
 	Model* othergun;
 	Model* otherbullet;
+
+	Model* test;
 	BoundingBox* othermodelBounding, *otherbulletBounding;
 
 	Light light;
@@ -923,6 +934,8 @@ public:
 		cube = std::make_unique<TexturedCube>("cube");
 		gun = new Model("model/gun/schofield-pistol-low.obj");
 		othergun = new Model("model/gun/schofield-pistol-low.obj");
+		test = new Model("model/gun/schofield-pistol-low.obj");
+		modelBounding = new BoundingBox(test->boundingbox, test->boxVertices);
 		/*for (int i = 0; i < 6; i++) {
 			bullets[i] = new Model("sphere.obj");
 		}*/
@@ -962,27 +975,52 @@ public:
 	~Scene() {
 		delete(gun);
 		delete(bulletBounding);
+		delete(modelBounding);
 		delete(SoundEngine1);
 		delete(SoundEngine2);
 		glDeleteProgram(shaderID);
 		glDeleteProgram(sphereShader);
 		glDeleteProgram(boundingShader);
 		glDeleteProgram(bulletShader);
+		glDeleteProgram(modelShader);
 	}
 
 	void render(const glm::mat4& projection, const glm::mat4& view, bool left)
 	{
 		//startGame();
 		gameStart = true;
+	
+		//glm::rotate(modelMatrix,0.5, glm::vec3(0, 1, 0));
+	   // modelMatrix
+		//draw model 
+		setUpLight();
+		glm::mat4 inverse_model = glm::translate(glm::mat4(1.0f), -headPos);
+		//cout << to_string(headPos) << endl;
+		//T = glm::translate(glm::mat4(1.0f), headPos);
+		//for gun picking if we are gonna implement that
+		glm::mat4 T_model = glm::translate(glm::mat4(1.0f), glm::vec3(headPos.x, headPos.y - 2.0f, headPos.z + 2.0f));
+		glm::mat4 scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(5.0f, 5.0f, 5.0f));
+		glm::mat4 modelMatrix_model = T_model * headRotationMtx*scale_model*inverse_model;
+		uProjection = glGetUniformLocation(modelShader, "projection");
+		uModelview = glGetUniformLocation(modelShader, "view");
+		model = glGetUniformLocation(modelShader, "model");
+		glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+		glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+		glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix_model[0][0]);
+		modelBounding->toWorld = modelMatrix_model;
+		test->Draw(modelShader);
+		if (showBounding) {
+			glUseProgram(boundingShader);
+			modelBounding->draw(boundingShader, projection, view);
+
+		}
+
+		//draw gun 
 		glm::mat4 inverse = glm::translate(glm::mat4(1.0f), -handPos);
 		glm::mat4 T = glm::translate(glm::mat4(1.0f), handPos);
 		glm::mat4 scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
 		glm::mat4 modelMatrix = T * handRotationMtx*scale*inverse;
 		modelMatrix = modelMatrix * glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
-		//glm::rotate(modelMatrix,0.5, glm::vec3(0, 1, 0));
-	   // modelMatrix
-
-		//draw gun 
 		glUseProgram(modelShader);
 		setUpLight();
 		uProjection = glGetUniformLocation(modelShader, "projection");
@@ -1020,52 +1058,51 @@ public:
 		//set bullet position when not firing
 		glUseProgram(bulletShader);
 		if (!fire) {
-			inverse = glm::translate(glm::mat4(1.0f), -handPos);
-			T = glm::translate(glm::mat4(1.0f), handPos);
-			scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
-			modelMatrix = T * handRotationMtx*scale*inverse*bullet->toWorld;
-
+			glm::mat4 inverse_b = glm::translate(glm::mat4(1.0f), -handPos);
+			glm::mat4 T_b = glm::translate(glm::mat4(1.0f), handPos);
+			glm::mat4 scale_b = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+			glm::mat4 modelMatrix_b = T_b * handRotationMtx*scale_b*inverse_b*bullet->toWorld;
+			
 			uProjection = glGetUniformLocation(bulletShader, "projection");
 			uModelview = glGetUniformLocation(bulletShader, "view");
 			model = glGetUniformLocation(bulletShader, "model");
 			// Now send these values to the shader program
 			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
-			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
+			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix_b[0][0]);
 			//bullet->Draw(bulletShader);
 			bullet->viewdir = shootDir;
 			//bullet->toWorld = modelMatrix;
+			//cout << to_string(shootDir) << endl;
+			bulletBounding->toWorld = modelMatrix_b;
 
 		}
 		//if firing
 		else if (fire&&gameStart) {
-
-			inverse = glm::translate(glm::mat4(1.0f), -handPos);
-			T = glm::translate(glm::mat4(1.0f), handPos);
-			scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.08f, 0.08f, 0.08f));
-			modelMatrix = T * handRotationMtx*scale*inverse*bullet->toWorld;
+			//bullet shoot
+			glm::mat4 inverse_bs = glm::translate(glm::mat4(1.0f), -handPos);
+			glm::mat4 T_bs = glm::translate(glm::mat4(1.0f), handPos);
+			glm::mat4 scale_bs = glm::scale(glm::mat4(1.0f), glm::vec3(0.08f, 0.08f, 0.08f));
+			glm::mat4 modelMatrix_bs = T_bs * scale_bs*inverse_bs*bullet->toWorld;
 			uProjection = glGetUniformLocation(bulletShader, "projection");
 			uModelview = glGetUniformLocation(bulletShader, "view");
 			model = glGetUniformLocation(bulletShader, "model");
+			//bullet->toWorld = modelMatrix;
 			// Now send these values to the shader program
+			//modelMatrix_bs = inverse(modelMatrix_bs);
 			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
-			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
-			if (!bullet->isFired) {
-				// bullet->viewdir = shootDir;
-			}
-			bullet->duration = 250;
+			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix_bs[0][0]);
 			bullet->Draw(bulletShader);
 			//cout << glm::to_string(bullet->toWorld) << endl;
 			//bullet->toWorld = gun->toworld;
-			if (bullet->duration != 0) {
-				bullet->Draw(bulletShader);
-				finishFire = false;
-			}
-
+			//bullet->viewdir = shootDir;
+			//bullet->viewdir = shootDir;
 
 			bullet->fire();
-			bulletBounding->toWorld = modelMatrix;
+			bulletBounding->toWorld*= glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
+			bulletBounding->toWorld = modelMatrix_bs;
+			//bulletBounding->toWorld = modelMatrix;
 			if (!soundPlayed) {
 				SoundEngine2->setSoundVolume(0.2);
 				SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
@@ -1076,23 +1113,11 @@ public:
 			
 		}
 		if (finishFire) {
-			bullet = new Model("sphere.obj");
-			bullet->toWorld = modelMatrix;
+			//delete(bullet);
+			//bullet = new Model("sphere.obj");
+			bullet->duration = 1000;
 			fired = false;
-			inverse = glm::translate(glm::mat4(1.0f), -handPos);
-			T = glm::translate(glm::mat4(1.0f), handPos);
-			scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
-			modelMatrix = T * scale*inverse*bullet->toWorld;
-
-			uProjection = glGetUniformLocation(bulletShader, "projection");
-			uModelview = glGetUniformLocation(bulletShader, "view");
-			model = glGetUniformLocation(bulletShader, "model");
-			// Now send these values to the shader program
-			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
-			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
-			glUniformMatrix4fv(model, 1, GL_FALSE, &modelMatrix[0][0]);
-			//bullet->toWorld = gun->toworld;
-			bullet->Draw(sphereShader);
+		   // cout<<"finish"<<endl;
 			
 
 		}
@@ -1102,7 +1127,7 @@ public:
 			SoundEngine1->setSoundVolume(0.3);
 
 			
-				SoundEngine1->play2D(SOUND_PATH, GL_FALSE);
+			//SoundEngine1->play2D(SOUND_PATH, GL_FALSE);
 			
 
 
@@ -1116,6 +1141,7 @@ public:
 		}
 		if (bullet->duration == 0) {
 			finishFire = true;
+			fire = false;
 		}
 	
 
@@ -1124,6 +1150,7 @@ public:
 		if (showBounding) {
 			glUseProgram(boundingShader);
 			bulletBounding->draw(boundingShader, projection, view);
+			
 		}
 		//draw skybox
 		glUseProgram(shaderID);
@@ -1141,17 +1168,9 @@ public:
 
 		//set lighting and model shaders
 		//for the model
-		setUpLight();
-		inverse = glm::translate(glm::mat4(1.0f), -headPos);
 
-		T = glm::translate(glm::mat4(1.0f), headPos);
-		//for gun picking if we are gonna implement that
-		// T = glm::translate(glm::mat4(1.0f), glm::vec3(headPos.x+0.5f,headPos.y-2.0f,headPos.z));
-		scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
-		modelMatrix = T * scale*inverse;
-		uProjection = glGetUniformLocation(modelShader, "projection");
-		uModelview = glGetUniformLocation(modelShader, "view");
-		model = glGetUniformLocation(modelShader, "model");
+		
+		checkcollision();
 
 	}
 
@@ -1191,6 +1210,7 @@ public:
 			bound1[1] < bound2[0] && bound1[3] < bound2[2] && bound1[5] < bound2[4]) {
 			bulletBounding->collisionflag = true;
 			modelBounding->collisionflag = true;
+			cout << "touch" << endl;
 			//TODO
 			//need a new model
 			//Model->dying=true;
@@ -1382,18 +1402,12 @@ protected:
 			}
 			else {
 				if (isLeft) {
-					int tempIndex = std::max(0, (frameHead - frameLag) % 30);
-					if (tempIndex < 0) tempIndex = 0;
-					//or 30-framLag+frameHead%30
-					glm::mat4 prevMat = ringBuf.at(tempIndex);
-					scene->render(projection, glm::inverse(prevMat), true);
+					
+					scene->render(projection, glm::inverse(headPose), true);
 				}
 				else {
-					int tempIndex = std::max(0, (frameHead - frameLag) % 30);
-					if (tempIndex < 0) tempIndex = 0;
-					//or 30-framLag+frameHead%30
-					glm::mat4 prevMat = ringBuf.at(tempIndex);
-					scene->render(projection, glm::inverse(prevMat), false);
+					
+					scene->render(projection, glm::inverse(headPose), false);
 				}
 
 			}

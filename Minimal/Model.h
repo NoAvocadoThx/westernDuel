@@ -39,7 +39,7 @@ public:
 	std::vector<GLfloat> boundingbox;
 	//for character's shooting mechanics
 	bool dying;
-	int duration = 150;
+	int duration = 1000;
 	bool isFired;
 
 
@@ -255,7 +255,7 @@ public:
 	void fire() {
 		glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), viewdir*0.05f); //
 		//glm::mat4 translateMat = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -1.0f));
-		toWorld = translateMat * toWorld;
+		toWorld =translateMat * toWorld;
 		duration--;
 		isFired = false;
 	}
