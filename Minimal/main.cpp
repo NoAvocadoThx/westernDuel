@@ -1292,7 +1292,7 @@ public:
 		glm::mat4 o_T = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
 		glm::mat4 o_scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.003f, 0.003f, 0.003f));
 		glm::mat4 o_modelMatrix = o_T * o_scale*o_inverse;
-		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -1300));
+		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(-200, 0, -1300));
 		o_modelMatrix *= glm::mat4_cast(otherPlayer.handrotation);
 		//o_modelMatrix*= glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
 		glUseProgram(modelShader);
