@@ -1227,7 +1227,7 @@ public:
 			bulletBounding->toWorld = modelMatrix_finish;
 			//delete(bullet);
 			//bullet = new Model("sphere.obj");
-			bullet->duration = 400;
+			bullet->duration = 4000;
 			fired = false;
 		   // cout<<"finish"<<endl;
 			
@@ -1286,7 +1286,7 @@ public:
 		//for the model
 
 		
-		if (checkcollision(bulletBounding, modelBounding)) {
+		if (checkcollision(bulletBounding, otherModelBounding)) {
 			cout << "u win!" << endl;
 		}
 
