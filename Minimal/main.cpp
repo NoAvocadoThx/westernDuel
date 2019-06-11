@@ -846,6 +846,7 @@ protected:
 		otherPlayer.handrotation = shootDir;
 		otherPlayer.headPos = headPos;
 		otherPlayer.headrotation = -headOri;
+		otherPlayer.shootDir = -forward;
 		c.call("in", ID, otherPlayer);
 		Player player = c.call("out", ID).as<Player>();
 		otherPlayer = player;
@@ -1061,7 +1062,7 @@ public:
 				glm::mat4 initGunMatrix = initGunPos * scale_init*inverse_init;
 				gunBox->toWorld = initGunMatrix;
 				scale_init = glm::scale(glm::mat4(1.0f), glm::vec3(0.0005f, 0.0005f, 0.0005f));
-				initGunPos = glm::translate(glm::mat4(1.0f), glm::vec3(headPos.x + 0.2f, headPos.y - 0.4f, headPos.z));
+				initGunPos = glm::translate(glm::mat4(1.0f), glm::vec3(headPos.x +0.175, headPos.y - 0.375f, headPos.z));
 				initGunMatrix = initGunPos * scale_init*inverse_init;
 				initGunMatrix = initGunMatrix * glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, -1));
 				glUniformMatrix4fv(model, 1, GL_FALSE, &initGunMatrix[0][0]);
@@ -1481,7 +1482,7 @@ public:
 		auto endTime = chrono::system_clock::now();
 		srand(time(NULL));
 		int randNum = rand() % (max - min + 1) + min;
-		if (chrono::duration_cast<chrono::seconds>(endTime - startTime).count() == 5) {
+		if (chrono::duration_cast<chrono::seconds>(endTime - startTime).count() == 10) {
 			gameStart = true;
 		}
 	}
