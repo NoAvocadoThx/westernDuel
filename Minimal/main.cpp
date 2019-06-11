@@ -1433,8 +1433,7 @@ public:
 		else {
 			skybox_r->draw(shaderID, projection, view);
 		}
-		//cube->toWorld = camMt * glm::scale(glm::mat4(1.0f), glm::vec3(scalor));
-		//cube->draw(shaderID, projection, view);
+
 
 
 		//set lighting and model shaders
