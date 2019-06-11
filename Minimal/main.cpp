@@ -1143,7 +1143,7 @@ public:
 			//bullet shoot
 			glm::mat4 inverse_bs = glm::translate(glm::mat4(1.0f), -handPos);
 			glm::mat4 T_bs = glm::translate(glm::mat4(1.0f), handPos);
-			glm::mat4 scale_bs = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
+			glm::mat4 scale_bs = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
 			glm::mat4 modelMatrix_bs = T_bs * scale_bs*inverse_bs*bullet->toWorld;
 			uProjection = glGetUniformLocation(bulletShader, "projection");
 			uModelview = glGetUniformLocation(bulletShader, "view");
@@ -1177,7 +1177,7 @@ public:
 			glUseProgram(bulletShader);
 			glm::mat4 inverse_finish = glm::translate(glm::mat4(1.0f), -handPos);
 			glm::mat4 T_finish = glm::translate(glm::mat4(1.0f), handPos);
-			glm::mat4 scale_finish = glm::scale(glm::mat4(1.0f), glm::vec3(0.1f, 0.1f, 0.1f));
+			glm::mat4 scale_finish = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
 			glm::mat4 modelMatrix_finish = T_finish * handRotationMtx*scale_finish*inverse_finish;
 
 			uProjection = glGetUniformLocation(bulletShader, "projection");
