@@ -95,6 +95,7 @@ bool isLeft = false;
 bool fire = false;
 bool finishFire;
 bool fired;
+bool pickedUp;
 bool soundPlayed;
 int frameCtr = 0;
 int frameHead = 0;
@@ -913,7 +914,7 @@ class Scene
 
 	bool gameStart;
 	bool shotPlayed;
-	bool pickedUp;
+	
 	chrono::time_point<chrono::system_clock> startTime;
 
 	const unsigned int GRID_SIZE{ 5 };
@@ -1510,25 +1511,26 @@ protected:
 				else if (inputState.Thumbstick[ovrHand_Left].x < -0.5f) scene->scalor = std::max(scene->scalor - 0.001f, 0.01f);
 			}
 			//index
-			if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
-				scene->RTPressed = true;
-				fire = true;
-				
+			if (!pickedUp) {
+				if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
+					scene->RTPressed = true;
+					fire = true;
+
+				}
+
+				else if (scene->RTPressed) {
+					bulletCount = (bulletCount + 1) % 50;
+
+
+
+					RT = true;
+
+					scene->RTPressed = false;
+					//RT = false;
+
+				}
+				else { RT = false; }
 			}
-
-			else if (scene->RTPressed) {
-				bulletCount = (bulletCount + 1) % 50;
-
-			
-				
-				RT = true;
-
-				scene->RTPressed = false;
-				//RT = false;
-
-			}
-			else { RT = false; }
-			
 
 			if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) {
 				scene->LTPressed = true;
