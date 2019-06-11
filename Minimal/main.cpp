@@ -1273,7 +1273,7 @@ public:
 		if (!otherPlayer.fire) {
 			glm::mat4 o_inverse_b = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
 			glm::mat4 o_T_b = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
-			glm::mat4 o_scale_b = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+			glm::mat4 o_scale_b = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 			glm::mat4 o_modelMatrix_b = o_T_b *o_scale_b*o_inverse_b*otherbullet->toWorld;
 			//curPlayerBullet = o_modelMatrix_b;
 			uProjection = glGetUniformLocation(bulletShader, "projection");
@@ -1297,7 +1297,7 @@ public:
 			//bullet shoot
 			glm::mat4 o_inverse_bs = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
 			glm::mat4 o_T_bs = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
-			glm::mat4 o_scale_bs = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+			glm::mat4 o_scale_bs = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 			glm::mat4 o_modelMatrix_bs = o_T_bs * o_scale_bs*o_inverse_bs*otherbullet->toWorld;
 			otherPlayerBullet = o_modelMatrix_bs;
 			uProjection = glGetUniformLocation(bulletShader, "projection");
@@ -1511,7 +1511,7 @@ protected:
 				else if (inputState.Thumbstick[ovrHand_Left].x < -0.5f) scene->scalor = std::max(scene->scalor - 0.001f, 0.01f);
 			}
 			//index
-			if (!pickedUp) {
+		
 				if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
 					scene->RTPressed = true;
 					fire = true;
@@ -1530,7 +1530,7 @@ protected:
 
 				}
 				else { RT = false; }
-			}
+			
 
 			if (inputState.IndexTrigger[ovrHand_Left] > 0.5f) {
 				scene->LTPressed = true;
