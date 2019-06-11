@@ -1414,6 +1414,10 @@ public:
 		if (checkcollision(bulletBounding, otherModelBounding)) {
 			cout << "u win!" << endl;
 			wins = true;
+			otherPlayer.dead = true;
+		}
+		if (otherPlayer.dead) {
+			otherPlayer.fire = false;
 		}
 
 	}
@@ -1536,7 +1540,7 @@ protected:
 			}
 			//index
 		
-				if (inputState.IndexTrigger[ovrHand_Right] > 0.5f) {
+				if (inputState.IndexTrigger[ovrHand_Right] > 0.5f&&scene->startGame&&pickedUp) {
 					scene->RTPressed = true;
 					fire = true;
 
@@ -1567,7 +1571,7 @@ protected:
 			}
 
 			//hand
-			if (inputState.HandTrigger[ovrHand_Right] > 0.5f) scene->RHPressed = true;
+			if (inputState.HandTrigger[ovrHand_Right] > 0.5f&&scene->startGame) scene->RHPressed = true;
 			else if (scene->RHPressed) {
 
 
