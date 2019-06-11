@@ -1283,7 +1283,7 @@ public:
 			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_b[0][0]);
-			//bullet->Draw(bulletShader);
+			otherbullet->Draw(bulletShader);
 			otherbullet->viewdir = otherPlayer.shootDir;
 			//bullet->toWorld = modelMatrix;
 			//cout << to_string(shootDir) << endl;
