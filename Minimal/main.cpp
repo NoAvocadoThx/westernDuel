@@ -97,7 +97,11 @@ bool finishFire;
 bool fired;
 bool pickedUp;
 bool soundPlayed;
+bool otherSoundPlayed;
 bool dead;
+bool gameStart;
+bool restartGame;
+bool wins;
 int frameCtr = 0;
 int frameHead = 0;
 int bulletCount = 0;
@@ -914,9 +918,9 @@ class Scene
 
 	Light light;
 
-	bool gameStart;
+
 	bool shotPlayed;
-	bool wins;
+	
 	bool signalPlayed = false;
 	
 	chrono::time_point<chrono::system_clock> startTime;
@@ -926,6 +930,7 @@ class Scene
 public:
 	int buttonA = 0, buttonB = 0, buttonX = 0;
 	bool buttonAPressed = false, buttonBPressed = false, buttonXPressed = false, LTPressed = false, RTPressed = false;
+	
 	bool LHPressed = false, RHPressed = false, buttonYPressed = false;
 	float scalor = 0.1f;
 	int eye;
@@ -1046,40 +1051,9 @@ public:
 			modelBounding->toWorld = modelMatrix_model;
 			//body->Draw(modelShader);
 
-			//draw other player
-			setUpLight();
-			glm::mat4 o_inverse_model = glm::translate(glm::mat4(1.0f), -otherPlayer.headPos);
-			//cout << to_string(headPos) << endl;
-			//T = glm::translate(glm::mat4(1.0f), headPos);
-			//for gun picking if we are gonna implement that
-			glm::mat4 o_T_model = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z + 1.5f));
-			glm::mat4 o_T_head = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z));
-			glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
-			glm::mat4 o_modelMatrix_model = o_T_model * o_scale_model*o_inverse_model;
-			glm::mat4 o_bounding_model = o_T_head * o_scale_model*o_inverse_model;
+		
 
-			o_modelMatrix_model *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -12.0f));
-			o_modelMatrix_model *= glm::mat4_cast(otherPlayer.headrotation);
-			o_bounding_model *= glm::mat4_cast(otherPlayer.headrotation);
-			o_modelMatrix_model *= glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
-			uProjection = glGetUniformLocation(modelShader, "projection");
-			uModelview = glGetUniformLocation(modelShader, "view");
-			model = glGetUniformLocation(modelShader, "model");
-			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
-			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
-			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_model[0][0]);
-			otherModelBounding->toWorld = o_modelMatrix_model;
-
-			if (wins) {
-				o_modelMatrix_model *= glm::scale(glm::mat4(1.0f), glm::vec3(0.003f, 0.003f, 0.003f));
-				uProjection = glGetUniformLocation(modelShader, "projection");
-				uModelview = glGetUniformLocation(modelShader, "view");
-				model = glGetUniformLocation(modelShader, "model");
-				glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
-				glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
-				glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_model[0][0]);
-			}
-			otherBody->Draw(modelShader);
+			
 			if (!pickedUp) {
 				glm::mat4 inverse_init = glm::translate(glm::mat4(1.0f), -handPos);
 				glm::mat4 scale_init = glm::scale(glm::mat4(1.0f), glm::vec3(0.08f, 0.08f, 0.08f));
@@ -1126,7 +1100,7 @@ public:
 				hand->Draw(modelShader);
 				handBounding->toWorld = modelMatrix;
 			}
-			if (RHPressed) {
+			if (RHPressed&&gameStart) {
 				if (checkcollision(gunBox, handBounding)) {
 					pickedUp = true;
 				}
@@ -1250,12 +1224,12 @@ public:
 			//other bullet
 
 
-			if (RT) {
+			if (RT&&bullet->duration <= 400 && bullet->duration >= 350) {
 
 				SoundEngine1->setSoundVolume(0.3);
 
 
-				//SoundEngine1->play2D(SOUND_PATH, GL_FALSE);
+				SoundEngine1->play2D(SOUND_PATH, GL_FALSE);
 
 
 
@@ -1272,13 +1246,53 @@ public:
 				fire = false;
 			}
 		}
+
+
+		//other player stuff
+		/***************************************************************************************************/
+		//draw other player
+		setUpLight();
+		glm::mat4 o_inverse_model = glm::translate(glm::mat4(1.0f), -otherPlayer.headPos);
+		//cout << to_string(headPos) << endl;
+		//T = glm::translate(glm::mat4(1.0f), headPos);
+		//for gun picking if we are gonna implement that
+		glm::mat4 o_T_model = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z + 1.5f));
+		glm::mat4 o_T_head = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z));
+		glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
+		glm::mat4 o_modelMatrix_model = o_T_model * o_scale_model*o_inverse_model;
+		glm::mat4 o_bounding_model = o_T_head * o_scale_model*o_inverse_model;
+
+		o_modelMatrix_model *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -20.0f));
+		o_modelMatrix_model *= glm::mat4_cast(otherPlayer.headrotation);
+		o_bounding_model *= glm::mat4_cast(otherPlayer.headrotation);
+		o_modelMatrix_model *= glm::rotate(glm::mat4(1.0), 1.0f* glm::pi<float>(), glm::vec3(0, 1, 0));
+		uProjection = glGetUniformLocation(modelShader, "projection");
+		uModelview = glGetUniformLocation(modelShader, "view");
+		model = glGetUniformLocation(modelShader, "model");
+		glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+		glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+		glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_model[0][0]);
+		otherModelBounding->toWorld = o_modelMatrix_model;
+		if (wins) {
+			o_modelMatrix_model *= glm::scale(glm::mat4(1.0f), glm::vec3(0.003f, 0.003f, 0.003f));
+			uProjection = glGetUniformLocation(modelShader, "projection");
+			uModelview = glGetUniformLocation(modelShader, "view");
+			model = glGetUniformLocation(modelShader, "model");
+			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_model[0][0]);
+		}
+		otherBody->Draw(modelShader);
+
+
+
 		setUpLight();
 		//draw other hand
 		glm::mat4 o_inverse = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
 		glm::mat4 o_T = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
 		glm::mat4 o_scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.003f, 0.003f, 0.003f));
 		glm::mat4 o_modelMatrix = o_T * o_scale*o_inverse;
-		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -750));
+		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -1300));
 		o_modelMatrix *= glm::mat4_cast(otherPlayer.handrotation);
 		//o_modelMatrix*= glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
 		glUseProgram(modelShader);
@@ -1320,7 +1334,7 @@ public:
 		//if firing
 		else if (otherPlayer.fire&&gameStart&&otherPlayer.pickedUp) {
 			finishFire = false;
-
+			otherPlayer.fired = true;
 			//bullet shoot
 			glm::mat4 o_inverse_bs = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
 			glm::mat4 o_T_bs = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
@@ -1355,6 +1369,14 @@ public:
 			//SoundEngine1->stopAllSounds();
 
 
+		}
+		if (otherPlayer.fired) {
+			SoundEngine1->setSoundVolume(0.3);
+
+			
+			//SoundEngine1->play2D(SOUND_PATH, GL_FALSE);
+			
+			otherPlayer.fired = false;
 		}
 		if (otherPlayer.finishFire) {
 			glUseProgram(bulletShader);
@@ -1435,6 +1457,7 @@ public:
 			dead = true;
 			fire = false;
 		}
+		
 
 	}
 
@@ -1514,6 +1537,14 @@ protected:
 		scene = std::shared_ptr<Scene>(new Scene());
 		std::cout << "Tracking lag: " << frameLag << " frames" << std::endl;
 		std::cout << "Rendering delay : " << renderLag << " frames" << std::endl;
+		if (wins || dead) {
+			restartGame = true;
+		}
+		if (restartGame) {
+			scene.reset();
+			scene== std::shared_ptr<Scene>(new Scene());
+			restartGame = false;
+		}
 	}
 
 	void shutdownGl() override
@@ -1556,7 +1587,7 @@ protected:
 			}
 			//index
 		
-				if (inputState.IndexTrigger[ovrHand_Right] > 0.5f&&scene->startGame&&pickedUp) {
+				if (inputState.IndexTrigger[ovrHand_Right] > 0.5f&&gameStart&&pickedUp) {
 					scene->RTPressed = true;
 					fire = true;
 
@@ -1587,7 +1618,7 @@ protected:
 			}
 
 			//hand
-			if (inputState.HandTrigger[ovrHand_Right] > 0.5f&&scene->startGame) scene->RHPressed = true;
+			if (inputState.HandTrigger[ovrHand_Right] > 0.5f&&gameStart) scene->RHPressed = true;
 			else if (scene->RHPressed) {
 
 

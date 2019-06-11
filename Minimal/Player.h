@@ -5,6 +5,7 @@
 struct Player
 {
 	bool fire;
+	bool fired;
 	bool pickedUp;
 	bool finishFire;
 	bool dead;
@@ -17,7 +18,7 @@ struct Player
 	glm::vec3 shootDir;
 
 	// rpc Macro to generate serialize code for the struct (Note: for glm object, manually specify x,y,z,w)
-	MSGPACK_DEFINE_MAP(fire, dead, pickedUp, finishFire,
+	MSGPACK_DEFINE_MAP(fire, dead, pickedUp, finishFire, fired,
 		rotation.x, rotation.y, rotation.z, rotation.w,
 		handpos.x, handpos.y, handpos.z,
 		handrotation.x, handrotation.y, handrotation.z, handrotation.w,
