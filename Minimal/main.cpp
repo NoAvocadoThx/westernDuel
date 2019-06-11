@@ -129,7 +129,7 @@ boost::circular_buffer<glm::vec3> ctrBuf(30);
 // Sound System
 irrklang::ISoundEngine * SoundEngine1;
 irrklang::ISoundEngine * SoundEngine2;
-
+irrklang::ISoundEngine * SoundEngine3;
 
 bool RT;
 bool LT;
@@ -914,6 +914,8 @@ class Scene
 
 	bool gameStart;
 	bool shotPlayed;
+	bool wins;
+	bool signalPlayed = false;
 	
 	chrono::time_point<chrono::system_clock> startTime;
 
@@ -979,6 +981,7 @@ public:
 		//init sound
 		SoundEngine1 = irrklang::createIrrKlangDevice();
 		SoundEngine2 = irrklang::createIrrKlangDevice();
+		SoundEngine3 = irrklang::createIrrKlangDevice();
 		//init light
 		light.direction = glm::vec3(-0.2f, -1.0f, 1.0f);
 		light.ambient = glm::vec3(0.2f, 0.2f, 0.2f);
@@ -1008,9 +1011,16 @@ public:
 
 	void render(const glm::mat4& projection, const glm::mat4& view, bool left)
 	{
-		//startGame();
-		gameStart = true;
-	
+		startGame();
+		
+		//gameStart = true;
+		if (gameStart) {
+			SoundEngine3->setSoundVolume(0.3);
+			if (!signalPlayed) {
+				SoundEngine3->play2D("sound/signal.mp3", GL_FALSE);
+				signalPlayed = true;
+			}
+		}
 		//glm::rotate(modelMatrix,0.5, glm::vec3(0, 1, 0));
 	   // modelMatrix
 		//draw model 
@@ -1041,11 +1051,11 @@ public:
 		//for gun picking if we are gonna implement that
 		glm::mat4 o_T_model = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z + 1.5f));
 		glm::mat4 o_T_head = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z));
-		glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
+		glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(0.3f, 0.3f, 0.3f));
 		glm::mat4 o_modelMatrix_model = o_T_model * o_scale_model*o_inverse_model;
 		glm::mat4 o_bounding_model = o_T_head *o_scale_model*o_inverse_model;
 		
-		o_modelMatrix_model *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10.0f)); 
+		o_modelMatrix_model *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -12.0f)); 
 		o_modelMatrix_model *= glm::mat4_cast(otherPlayer.headrotation);
 		o_bounding_model*= glm::mat4_cast(otherPlayer.headrotation);
 		o_modelMatrix_model *= glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
@@ -1056,8 +1066,17 @@ public:
 		glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 		glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_model[0][0]);
 		otherModelBounding->toWorld =o_modelMatrix_model;
+		
+		if (wins) {
+			o_modelMatrix_model*=glm::scale(glm::mat4(1.0f), glm::vec3(0.003f, 0.003f, 0.003f));
+			uProjection = glGetUniformLocation(modelShader, "projection");
+			uModelview = glGetUniformLocation(modelShader, "view");
+			model = glGetUniformLocation(modelShader, "model");
+			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_model[0][0]);
+		}
 		otherBody->Draw(modelShader);
-
 		if (!pickedUp) {
 			glm::mat4 inverse_init = glm::translate(glm::mat4(1.0f), -handPos);
 			glm::mat4 scale_init = glm::scale(glm::mat4(1.0f), glm::vec3(0.08f, 0.08f, 0.08f));
@@ -1113,9 +1132,9 @@ public:
 		//draw other hand
 		glm::mat4 o_inverse = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
 		glm::mat4 o_T = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
-		glm::mat4 o_scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
+		glm::mat4 o_scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.003f, 0.003f, 0.003f));
 		glm::mat4 o_modelMatrix = o_T *o_scale*o_inverse;
-		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -500));
+		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -750));
 		o_modelMatrix *= glm::mat4_cast(otherPlayer.handrotation);
 		//o_modelMatrix*= glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
 		glUseProgram(modelShader);
@@ -1359,7 +1378,7 @@ public:
 
 
 
-		if (otherbullet->duration == 0) {
+		if (otherbullet->duration <= 0) {
 			otherPlayer.finishFire = true;
 			otherPlayer.fire = false;
 		}
@@ -1379,10 +1398,10 @@ public:
 
 		if (left) {
 			// Render Skybox : remove view translation
-		//	skybox_l->draw(shaderID, projection, view);
+			skybox_l->draw(shaderID, projection, view);
 		}
 		else {
-			//skybox_r->draw(shaderID, projection, view);
+			skybox_r->draw(shaderID, projection, view);
 		}
 		//cube->toWorld = camMt * glm::scale(glm::mat4(1.0f), glm::vec3(scalor));
 		//cube->draw(shaderID, projection, view);
@@ -1394,6 +1413,7 @@ public:
 		
 		if (checkcollision(bulletBounding, otherModelBounding)) {
 			cout << "u win!" << endl;
+			wins = true;
 		}
 
 	}
@@ -1418,7 +1438,7 @@ public:
 		auto endTime = chrono::system_clock::now();
 		srand(time(NULL));
 		int randNum = rand() % (max - min + 1) + min;
-		if (chrono::duration_cast<chrono::seconds>(endTime - startTime).count() == randNum) {
+		if (chrono::duration_cast<chrono::seconds>(endTime - startTime).count() == 5) {
 			gameStart = true;
 		}
 	}
