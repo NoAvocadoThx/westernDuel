@@ -1337,7 +1337,7 @@ public:
 			//bullet->viewdir = shootDir;
 			//bullet->viewdir = shootDir;
 
-			otherbullet->fire();
+			otherbullet->fire2();
 			//bulletBounding->toWorld*= glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
 			otherbulletBounding->toWorld = o_modelMatrix_bs;
 			//bulletBounding->toWorld = modelMatrix;
