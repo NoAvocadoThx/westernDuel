@@ -1333,7 +1333,7 @@ public:
 		}
 		//if firing
 		else if (otherPlayer.fire&&gameStart&&otherPlayer.pickedUp) {
-			finishFire = false;
+			otherPlayer.finishFire = false;
 			otherPlayer.fired = true;
 			//bullet shoot
 			glm::mat4 o_inverse_bs = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
