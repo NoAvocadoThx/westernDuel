@@ -1648,7 +1648,7 @@ protected:
 int main(int argc, char** argv)
 {
 
-	rpc::client c("localhost", 8050);
+	rpc::client c("128.54.70.59", 8050);
 	std::cout << "Connected" << std::endl;
 
 	int result = -1;
