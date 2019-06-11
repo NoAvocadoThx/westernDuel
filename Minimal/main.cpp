@@ -1282,6 +1282,7 @@ public:
 			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
 			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
 			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_model[0][0]);
+			otherModelBounding ->toWorld= o_modelMatrix_model;
 		}
 		otherBody->Draw(modelShader);
 
@@ -1289,8 +1290,8 @@ public:
 
 		setUpLight();
 		//draw other hand
-		glm::mat4 o_inverse = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
-		glm::mat4 o_T = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
+		glm::mat4 o_inverse = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
+		glm::mat4 o_T = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
 		glm::mat4 o_scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.003f, 0.003f, 0.003f));
 		glm::mat4 o_modelMatrix = o_T * o_scale*o_inverse;
 		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(-200, 0, -1300));
@@ -1543,7 +1544,7 @@ protected:
 		}
 		if (restartGame) {
 			scene.reset();
-			scene== std::shared_ptr<Scene>(new Scene());
+			scene= std::shared_ptr<Scene>(new Scene());
 			restartGame = false;
 		}
 	}
