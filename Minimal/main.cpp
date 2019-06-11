@@ -835,11 +835,10 @@ protected:
 		_viewScaleDesc.HmdToEyePose[0].Position.x = (float)(-iod / 2);
 		_viewScaleDesc.HmdToEyePose[1].Position.x = (float)(iod / 2);
 
-		otherPlayer.pos = headPos;
 		otherPlayer.handpos = handPos;
 		otherPlayer.handrotation = shootDir;
 		otherPlayer.headPos = headPos;
-		otherPlayer.headrotation = headOri;
+		otherPlayer.headrotation = -headOri;
 		c.call("in", ID, otherPlayer);
 		Player player = c.call("out", ID).as<Player>();
 		otherPlayer = player;
@@ -1041,10 +1040,14 @@ public:
 		//for gun picking if we are gonna implement that
 		glm::mat4 o_T_model = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z + 1.5f));
 		glm::mat4 o_T_head = glm::translate(glm::mat4(1.0f), glm::vec3(otherPlayer.headPos.x, otherPlayer.headPos.y, otherPlayer.headPos.z));
-		glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
-		glm::mat4 o_modelMatrix_model = o_T_model * glm::mat4_cast(otherPlayer.headrotation)*o_scale_model*o_inverse_model;
-		glm::mat4 o_bounding_model = o_T_head * glm::mat4_cast(otherPlayer.headrotation)*o_scale_model*o_inverse_model;
-		o_modelMatrix_model *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10.0f))*glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));;
+		glm::mat4 o_scale_model = glm::scale(glm::mat4(1.0f), glm::vec3(0.8f, 0.8f, 0.8f));
+		glm::mat4 o_modelMatrix_model = o_T_model * o_scale_model*o_inverse_model;
+		glm::mat4 o_bounding_model = o_T_head *o_scale_model*o_inverse_model;
+		
+		o_modelMatrix_model *= glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -10.0f)); 
+		o_modelMatrix_model *= glm::mat4_cast(otherPlayer.headrotation);
+		o_bounding_model*= glm::mat4_cast(otherPlayer.headrotation);
+		o_modelMatrix_model *= glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
 		uProjection = glGetUniformLocation(modelShader, "projection");
 		uModelview = glGetUniformLocation(modelShader, "view");
 		model = glGetUniformLocation(modelShader, "model");
@@ -1110,9 +1113,10 @@ public:
 		glm::mat4 o_inverse = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
 		glm::mat4 o_T = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
 		glm::mat4 o_scale = glm::scale(glm::mat4(1.0f), glm::vec3(0.001f, 0.001f, 0.001f));
-		glm::mat4 o_modelMatrix = o_T * glm::mat4_cast(otherPlayer.handrotation)*o_scale*o_inverse;
-		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 50));
-		
+		glm::mat4 o_modelMatrix = o_T *o_scale*o_inverse;
+		o_modelMatrix = o_modelMatrix * glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -500));
+		o_modelMatrix *= glm::mat4_cast(otherPlayer.handrotation);
+		//o_modelMatrix*= glm::rotate(glm::mat4(1.0), 1.01f* glm::pi<float>(), glm::vec3(0, 1, 0));
 		glUseProgram(modelShader);
 		setUpLight();
 		uProjection = glGetUniformLocation(modelShader, "projection");
@@ -1172,6 +1176,7 @@ public:
 		}
 		//if firing
 		else if (fire&&gameStart&&pickedUp) {
+			otherPlayer.fire = true;
 			finishFire = false;
 			
 			//bullet shoot
@@ -1207,6 +1212,7 @@ public:
 			//SoundEngine1->stopAllSounds();
 			fired = true;
 			
+			
 		}
 		if (finishFire) {
 			glUseProgram(bulletShader);
@@ -1227,7 +1233,7 @@ public:
 			bulletBounding->toWorld = modelMatrix_finish;
 			//delete(bullet);
 			//bullet = new Model("sphere.obj");
-			bullet->duration = 4000;
+			bullet->duration = 400;
 			fired = false;
 		   // cout<<"finish"<<endl;
 			
@@ -1259,7 +1265,102 @@ public:
 			finishFire = true;
 			fire = false;
 		}
-	
+	    /*********************************************************************/
+		//other bulet
+		//set bullet position when not firing
+		glUseProgram(bulletShader);
+		if (!otherPlayer.fire) {
+			glm::mat4 o_inverse_b = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
+			glm::mat4 o_T_b = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
+			glm::mat4 o_scale_b = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+			glm::mat4 o_modelMatrix_b = o_T_b *o_scale_b*o_inverse_b*otherbullet->toWorld;
+			//curPlayerBullet = o_modelMatrix_b;
+			uProjection = glGetUniformLocation(bulletShader, "projection");
+			uModelview = glGetUniformLocation(bulletShader, "view");
+			model = glGetUniformLocation(bulletShader, "model");
+			// Now send these values to the shader program
+			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_b[0][0]);
+			//bullet->Draw(bulletShader);
+			otherbullet->viewdir = otherPlayer.shootDir;
+			//bullet->toWorld = modelMatrix;
+			//cout << to_string(shootDir) << endl;
+			otherbulletBounding->toWorld = o_modelMatrix_b;
+
+		}
+		//if firing
+		else if (otherPlayer.fire&&gameStart&&otherPlayer.pickedUp) {
+			finishFire = false;
+
+			//bullet shoot
+			glm::mat4 o_inverse_bs = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
+			glm::mat4 o_T_bs = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
+			glm::mat4 o_scale_bs = glm::scale(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.05f));
+			glm::mat4 o_modelMatrix_bs = o_T_bs * o_scale_bs*o_inverse_bs*otherbullet->toWorld;
+			otherPlayerBullet = o_modelMatrix_bs;
+			uProjection = glGetUniformLocation(bulletShader, "projection");
+			uModelview = glGetUniformLocation(bulletShader, "view");
+			model = glGetUniformLocation(bulletShader, "model");
+			//bullet->toWorld = modelMatrix;
+			// Now send these values to the shader program
+			//modelMatrix_bs = inverse(modelMatrix_bs);
+			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_bs[0][0]);
+			otherbullet->Draw(bulletShader);
+			//cout << glm::to_string(bullet->toWorld) << endl;
+			//bullet->toWorld = gun->toworld;
+			//bullet->viewdir = shootDir;
+			//bullet->viewdir = shootDir;
+
+			otherbullet->fire();
+			//bulletBounding->toWorld*= glm::scale(glm::mat4(1.0f), glm::vec3(0.5f, 0.5f, 0.5f));
+			otherbulletBounding->toWorld = o_modelMatrix_bs;
+			//bulletBounding->toWorld = modelMatrix;
+			if (!soundPlayed) {
+				SoundEngine2->setSoundVolume(0.2);
+				SoundEngine2->play2D(FIRING_BGM, GL_TRUE);
+				soundPlayed = true;
+			}
+			//SoundEngine1->stopAllSounds();
+
+
+		}
+		if (otherPlayer.finishFire) {
+			glUseProgram(bulletShader);
+			glm::mat4 o_inverse_finish = glm::translate(glm::mat4(1.0f), -otherPlayer.handpos);
+			glm::mat4 o_T_finish = glm::translate(glm::mat4(1.0f), otherPlayer.handpos);
+			glm::mat4 o_scale_finish = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+			glm::mat4 o_modelMatrix_finish = o_T_finish *o_scale_finish*o_inverse_finish;
+			otherPlayerBullet = o_modelMatrix_finish;
+			uProjection = glGetUniformLocation(bulletShader, "projection");
+			uModelview = glGetUniformLocation(bulletShader, "view");
+			model = glGetUniformLocation(bulletShader, "model");
+			// Now send these values to the shader program
+			glUniformMatrix4fv(uProjection, 1, GL_FALSE, &projection[0][0]);
+			glUniformMatrix4fv(uModelview, 1, GL_FALSE, &view[0][0]);
+			glUniformMatrix4fv(model, 1, GL_FALSE, &o_modelMatrix_finish[0][0]);
+			otherbullet->toWorld = o_modelMatrix_finish;
+			//bullet->Draw(bulletShader);
+			otherbulletBounding->toWorld = o_modelMatrix_finish;
+			//delete(bullet);
+			//bullet = new Model("sphere.obj");
+			otherbullet->duration = 400;
+			// cout<<"finish"<<endl;
+
+			 //bullet->toWorld = glm::scale(glm::mat4(1.0f), glm::vec3(0.5f));
+		}
+
+
+
+		if (otherbullet->duration == 0) {
+			otherPlayer.finishFire = true;
+			otherPlayer.fire = false;
+		}
+
+
+
 
 
 		//show bouding boxes
