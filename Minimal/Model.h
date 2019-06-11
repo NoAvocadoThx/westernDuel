@@ -39,7 +39,7 @@ public:
 	std::vector<GLfloat> boundingbox;
 	//for character's shooting mechanics
 	bool dying;
-	int duration = 1000;
+	int duration = 400;
 	bool isFired;
 
 
